@@ -54,8 +54,13 @@ EspResult<void> Passive::begin() {
   // 3. Prepare Payload and Spawn Task
   playback_state_.buzzer = this;
 
-  if (EspError err = task_.start({.name = "buzzer", .priority = uxTaskPriorityGet(nullptr)},
-                                 &playback_state_, playback_step, playback_stop)) {
+  if (EspError err = task_.start(
+          {
+              .name = "buzzer",
+              .priority = uxTaskPriorityGet(nullptr),
+              .prevent_light_sleep = true,
+          },
+          &playback_state_, playback_step, playback_stop)) {
     return err.log(TAG, "Failed to spawn buzzer FreeRTOS task");
   }
   return ESP_OK;

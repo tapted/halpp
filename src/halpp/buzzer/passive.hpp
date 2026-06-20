@@ -38,7 +38,11 @@ class Passive {
     ledc_channel_t channel = LEDC_CHANNEL_0;
     ledc_timer_bit_t timer_bit = LEDC_TIMER_13_BIT;
     ledc_mode_t speed_mode = LEDC_LOW_SPEED_MODE;
-    ledc_clk_cfg_t clk_cfg = LEDC_AUTO_CLK;
+
+    // Default to XTAL. The APB clock is affected by light sleep and frequency scaling. XTAL is
+    // fixed at 40MHz which gives a max tone of 4,882Hz with 13-bit resolution. The APB clock would
+    // double that, but it would be affected by power management.
+    ledc_clk_cfg_t clk_cfg = LEDC_USE_XTAL_CLK;
     uint32_t idle_level = 0;
   };
 
