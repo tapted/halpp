@@ -59,6 +59,8 @@ class Passive {
 
   // Plays a melody asynchronously. The backing array must remain valid in memory.
   void play(Melody melody);
+  // Plays a single, dynamically defined note.
+  void beep(uint32_t frequency_hz, uint32_t duration_ms, float volume = 0.1f);
   void stop();
 
  private:
@@ -84,6 +86,10 @@ class Passive {
   Timer pwm_timer_;
   Channel pwm_channel_;
   YieldingTask<PlaybackState> task_;
+
+  // A 12-byte permanent memory location to safely back the std::span when playing a dynamically
+  // generated runtime beep.
+  std::array<Note, 1> beep_scratchpad_{};
 
   static std::optional<uint32_t> playback_step(YieldingTask<PlaybackState>& task);
   static void playback_stop(YieldingTask<PlaybackState>& task);

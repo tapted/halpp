@@ -72,6 +72,16 @@ void Passive::play(Melody melody) {
   task_.notify(true);  // Wake the task up and clear any existing stop requests
 }
 
+void Passive::beep(uint32_t frequency_hz, uint32_t duration_ms, float volume) {
+  if (!is_initialized()) return;
+  
+  // 1. Write the dynamic values into our stable, instance-owned memory
+  beep_scratchpad_[0] = Note{frequency_hz, duration_ms, volume};
+  
+  // 2. Play it. The span safely points to the scratchpad.
+  play(beep_scratchpad_); 
+}
+
 void Passive::stop() {
   if (!is_initialized()) return;
   task_.request_stop();
