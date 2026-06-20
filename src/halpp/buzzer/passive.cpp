@@ -55,7 +55,7 @@ EspResult<void> Passive::begin() {
   // 3. Prepare Payload and Spawn Task
   playback_state_.buzzer = this;
 
-  if (EspError err = task_.start("buzzer_task", STACK_SIZE, uxTaskPriorityGet(nullptr),
+  if (EspError err = task_.start({.name = "buzzer", .priority = uxTaskPriorityGet(nullptr)},
                                  &playback_state_, playback_step, playback_stop)) {
     return err.log(TAG, "Failed to spawn buzzer FreeRTOS task");
   }
@@ -74,12 +74,12 @@ void Passive::play(Melody melody) {
 
 void Passive::beep(uint32_t frequency_hz, uint32_t duration_ms, float volume) {
   if (!is_initialized()) return;
-  
+
   // 1. Write the dynamic values into our stable, instance-owned memory
   beep_scratchpad_[0] = Note{frequency_hz, duration_ms, volume};
-  
+
   // 2. Play it. The span safely points to the scratchpad.
-  play(beep_scratchpad_); 
+  play(beep_scratchpad_);
 }
 
 void Passive::stop() {
