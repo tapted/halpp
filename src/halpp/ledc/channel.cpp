@@ -27,7 +27,11 @@ EspResult<void> Channel::stop() {
 
 EspResult<void> Channel::reset() {
   if (channel_ != LEDC_CHANNEL_MAX) {
-    esp_err_t err = ledc_stop(mode_, channel_, idle_level_);
+    ledc_channel_config_t deconfig{};
+    deconfig.speed_mode = mode_;
+    deconfig.channel = channel_;
+    deconfig.deconfigure = true;
+    esp_err_t err = ledc_channel_config(&deconfig);
     channel_ = LEDC_CHANNEL_MAX;
     return err;
   }

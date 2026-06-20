@@ -15,7 +15,6 @@
 namespace HAL {
 
 static const char* TAG = "PassiveBuzzer";
-static const uint32_t STACK_SIZE = 2048;
 
 Passive::~Passive() {
 }

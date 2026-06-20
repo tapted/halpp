@@ -72,7 +72,8 @@ EspResult<void> Timer::reset() {
         .timer_num = timer_,
         .freq_hz = 1000,           // Ignored
         .clk_cfg = LEDC_AUTO_CLK,  // Ignored
-        .deconfigure = true};
+        .deconfigure = true,
+    };
     esp_err_t err = ledc_timer_config(&timer_conf);
     timer_ = LEDC_TIMER_MAX;
     return err;
