@@ -10,13 +10,11 @@
 #include <cstdint>
 #include <driver/gpio.h>
 #include <driver/ledc.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
 #include <optional>
 #include <span>
 
 #include "espbase/esp_result.hpp"
+#include "espbase/yielding_task.hpp"
 #include "halpp/ledc/channel.hpp"
 #include "halpp/ledc/timer.hpp"
 
@@ -57,34 +55,38 @@ class Passive {
   EspResult<void> begin();
 
   // --- Playback Operations ---
-  bool is_initialized() const { return task_handle_ != nullptr; }
+  bool is_initialized() const { return !!pwm_timer_; }
 
   // Plays a melody asynchronously. The backing array must remain valid in memory.
   void play(Melody melody);
   void stop();
 
  private:
+  // The isolated payload struct for the FreeRTOS task
+  struct PlaybackState {
+    const Note* melody = nullptr;
+    size_t size = 0;
+    size_t current_index = 0;   // State Machine offset tracking
+    Passive* buzzer = nullptr;  // Allows the static loop to access hardware methods
+  };
+
   static std::optional<Passive>& default_optional() {
     static std::optional<Passive> inst;
     return inst;
   }
+
   Passive(const Passive&) = delete;
   Passive& operator=(const Passive&) = delete;
 
   Config config_;
-
-  TaskHandle_t task_handle_ = nullptr;
-  SemaphoreHandle_t sync_sem_ = nullptr;
-
-  const Note* current_melody_ = nullptr;
-  size_t melody_size_ = 0;
-  volatile bool stop_requested_ = false;
+  PlaybackState playback_state_{};
 
   Timer pwm_timer_;
   Channel pwm_channel_;
+  YieldingTask<PlaybackState> task_;
 
-  static void task_trampoline(void* arg);
-  void task_loop();
+  static std::optional<uint32_t> playback_step(YieldingTask<PlaybackState>& task);
+  static void playback_stop(YieldingTask<PlaybackState>& task);
   void set_hardware_note(uint32_t frequency_hz, float volume);
 };
 

@@ -5,14 +5,12 @@
  * Original Source: https://github.com/cdsama/esp_idf_buzzer
  */
 
-#include "passive.hpp"
+#include "halpp/buzzer/passive.hpp"
 
 #include <algorithm>
 #include <optional>
 
-#include "esp_log.h"
-
-#include "hal/ledc_ll.h"
+#include <hal/ledc_ll.h>
 
 namespace HAL {
 
@@ -20,14 +18,6 @@ static const char* TAG = "PassiveBuzzer";
 static const uint32_t STACK_SIZE = 2048;
 
 Passive::~Passive() {
-  if (task_handle_ != nullptr) {
-    stop_requested_ = true;
-    xSemaphoreGive(sync_sem_);
-    vTaskDelete(task_handle_);
-  }
-  if (sync_sem_ != nullptr) {
-    vSemaphoreDelete(sync_sem_);
-  }
 }
 
 EspResult<void> Passive::init_default(Config config) {
@@ -60,66 +50,47 @@ EspResult<void> Passive::begin() {
     return err.log(TAG, "Failed to configure LEDC channel");
   }
 
-  // Halt any immediate hardware jitter
-  pwm_channel_.stop();
+  pwm_channel_.stop();  // Halt any immediate hardware jitter
 
-  // 3. Create Sync Sem and FreeRTOS Task
-  sync_sem_ = xSemaphoreCreateBinary();
-  if (!sync_sem_) return ESP_ERR_NO_MEM;
+  // 3. Prepare Payload and Spawn Task
+  playback_state_.buzzer = this;
 
-  BaseType_t res = xTaskCreate(task_trampoline, "buzzer_task", STACK_SIZE, this,
-                               uxTaskPriorityGet(nullptr), &task_handle_);
-  if (res != pdPASS) return ESP_ERR_NO_MEM;
-
+  if (EspError err = task_.start("buzzer_task", STACK_SIZE, uxTaskPriorityGet(nullptr),
+                                 &playback_state_, playback_step, playback_stop)) {
+    return err.log(TAG, "Failed to spawn buzzer FreeRTOS task");
+  }
   return ESP_OK;
 }
 
 void Passive::play(Melody melody) {
   if (!is_initialized()) return;
 
-  current_melody_ = melody.data();
-  melody_size_ = melody.size();
-  stop_requested_ = false;
-  xSemaphoreGive(sync_sem_);
+  playback_state_.melody = melody.data();
+  playback_state_.size = melody.size();
+  playback_state_.current_index = 0;  // Reset state machine for new playback
+
+  task_.notify(true);  // Wake the task up and clear any existing stop requests
 }
 
 void Passive::stop() {
   if (!is_initialized()) return;
-
-  stop_requested_ = true;
-  xSemaphoreGive(sync_sem_);
+  task_.request_stop();
 }
 
-void Passive::task_trampoline(void* arg) {
-  static_cast<Passive*>(arg)->task_loop();
-}
-
-void Passive::task_loop() {
-  while (true) {
-    if (xSemaphoreTake(sync_sem_, portMAX_DELAY) == pdTRUE) {
-      bool restart = true;
-      while (restart) {
-        restart = false;
-        const Note* playing = current_melody_;
-        size_t size = melody_size_;
-
-        if (playing != nullptr && !stop_requested_) {
-          for (size_t i = 0; i < size; ++i) {
-            if (stop_requested_) break;
-
-            set_hardware_note(playing[i].frequency_hz, playing[i].volume);
-
-            if (xSemaphoreTake(sync_sem_, pdMS_TO_TICKS(playing[i].duration_ms)) == pdTRUE) {
-              if (!stop_requested_) restart = true;
-              break;
-            }
-          }
-        }
-        // Graceful pause between melodies or when stopped
-        pwm_channel_.stop();
-      }
-    }
+std::optional<uint32_t> Passive::playback_step(YieldingTask<PlaybackState>& task) {
+  PlaybackState* state = task.data();
+  if (state->current_index >= state->size || state->melody == nullptr) {
+    return std::nullopt;  // Executes playback_stop().
   }
+
+  const Note& note = state->melody[state->current_index];
+  state->buzzer->set_hardware_note(note.frequency_hz, note.volume);
+  state->current_index++;
+  return note.duration_ms;
+}
+
+void Passive::playback_stop(YieldingTask<PlaybackState>& task) {
+  task.data()->buzzer->pwm_channel_.stop();
 }
 
 void Passive::set_hardware_note(uint32_t frequency, float volume) {
