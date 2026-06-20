@@ -3,21 +3,16 @@
 #include <array>
 #include <cstdint>
 #include <string_view>
-#include <format>
 
 #include "espbase/esp_result.hpp"
 #include "halpp/i2c/i2c_device.hpp"
+
 
 namespace HAL {
 
 class I2C7Seg {
  public:
-  enum class BlinkRate : uint8_t {
-    Off = 0,
-    Hz_2 = 1,
-    Hz_1 = 2,
-    Half_Hz = 3
-  };
+  enum class BlinkRate : uint8_t { Off = 0, Hz_2 = 1, Hz_1 = 2, Half_Hz = 3 };
 
   // --- Pattern 1: Multi-Display (Explicit Ownership) ---
   // The default constructor allows for an empty handle, used by the singleton.
@@ -35,10 +30,9 @@ class I2C7Seg {
 
   // Initializes the default instance and attaches it to the bus
   static EspResult<void> init_default(uint8_t i2c_address = 0x70);
-  
+
   // Releases the device handle for the default instance
   static EspResult<void> deinit_default();
-
 
   // --- Display Operations ---
   bool is_initialized() const { return !!i2c_dev_; }
@@ -56,15 +50,8 @@ class I2C7Seg {
   void print_error();
 
   void print(std::string_view str);
-
-  template <typename T>
-  void print_number(T n) {
-    print(std::format("{}", n));
-  }
-
-  void print_float(double n, uint8_t frac_digits = 2) {
-    print(std::format("{:.{}f}", n, frac_digits));
-  }
+  void print_number(int n);
+  void print_float(double n, uint8_t frac_digits = 2);
 
  private:
   I2CDevice i2c_dev_;

@@ -1,6 +1,7 @@
 #include "halpp/segmented/i2c_7seg.hpp"
 
 #include <algorithm>
+#include <cstdio>
 
 #include "halpp/i2c/i2c_master.hpp"
 
@@ -93,12 +94,12 @@ void I2C7Seg::write_digit_raw(uint8_t digit, uint8_t bitmask) {
 
 void I2C7Seg::write_digit_ascii(uint8_t digit, char c, bool dot) {
   if (digit > 4) return;
-  
+
   uint8_t font = 0;
   if (c >= ' ' && c <= '~') {
     font = kSevenSegFontTable[c - ' '];
   }
-  
+
   write_digit_raw(digit, font | (dot ? (1 << 7) : 0));
 }
 
@@ -108,12 +109,15 @@ void I2C7Seg::draw_colon(bool state) {
 
 void I2C7Seg::print_error() {
   for (uint8_t i = 0; i < 5; ++i) {
-    write_digit_raw(i, (i == 2 ? 0x00 : 0x40)); 
+    write_digit_raw(i, (i == 2 ? 0x00 : 0x40));
   }
 }
 
 void I2C7Seg::print(std::string_view str) {
+  uint16_t saved_dots = display_buffer_[2];
   clear();
+  display_buffer_[2] = saved_dots;
+
   int8_t digit_idx = 4;
 
   for (int i = static_cast<int>(str.length()) - 1; i >= 0; --i) {
@@ -134,6 +138,19 @@ void I2C7Seg::print(std::string_view str) {
     write_digit_ascii(digit_idx, c, dot);
     digit_idx--;
   }
+}
+
+void I2C7Seg::print_number(int n) {
+  char buf[32];
+  snprintf(buf, sizeof(buf), "%d", std::abs(n));
+  print(buf);
+}
+
+void I2C7Seg::print_float(double n, uint8_t frac_digits) {
+  char buf[32];
+  // The "%.*f" specifier allows us to pass precision dynamically via an argument
+  snprintf(buf, sizeof(buf), "%.*f", frac_digits, n);
+  print(buf);
 }
 
 }  // namespace HAL
