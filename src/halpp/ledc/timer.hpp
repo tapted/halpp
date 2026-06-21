@@ -10,7 +10,6 @@
 
 #include "espbase/esp_result.hpp"
 
-
 namespace HAL {
 
 class Channel;
@@ -20,9 +19,10 @@ class Timer {
   constexpr Timer() = default;
   constexpr explicit Timer(ledc_mode_t mode, ledc_timer_t timer) : mode_(mode), timer_(timer) {}
 
-  static EspResult<Timer> configure(ledc_mode_t mode, ledc_timer_t timer_num,
-                                    ledc_timer_bit_t resolution, uint32_t freq_hz,
-                                    ledc_clk_cfg_t clk_cfg = LEDC_AUTO_CLK);
+  static EspResult<Timer> configure(ledc_timer_t timer_num, ledc_clk_cfg_t clk_cfg = LEDC_AUTO_CLK,
+                                    ledc_timer_bit_t resolution = LEDC_TIMER_13_BIT,
+                                    uint32_t freq_hz = 4000,
+                                    ledc_mode_t mode = LEDC_LOW_SPEED_MODE);
 
   EspResult<Channel> add_channel(ledc_channel_t channel, gpio_num_t gpio_num,
                                  uint32_t idle_level = 0);

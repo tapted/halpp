@@ -36,8 +36,8 @@ EspResult<void> Passive::begin() {
   if (is_initialized()) return ESP_OK;
 
   // 1. Configure the hardware timer and take ownership
-  if (EspError err = EspError::check(Timer::configure(config_.speed_mode, config_.timer_num,
-                                                      config_.timer_bit, 4000, config_.clk_cfg),
+  if (EspError err = EspError::check(Timer::configure(config_.timer_num, config_.clk_cfg,
+                                                      config_.timer_bit, 4000, config_.speed_mode),
                                      &pwm_timer_)) {
     return err.log(TAG, "Failed to configure LEDC timer");
   }

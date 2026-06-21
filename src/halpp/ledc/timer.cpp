@@ -4,9 +4,8 @@
 
 namespace HAL {
 
-EspResult<Timer> Timer::configure(ledc_mode_t mode, ledc_timer_t timer_num,
-                                  ledc_timer_bit_t resolution, uint32_t freq_hz,
-                                  ledc_clk_cfg_t clk_cfg) {
+EspResult<Timer> Timer::configure(ledc_timer_t timer_num, ledc_clk_cfg_t clk_cfg,
+                                  ledc_timer_bit_t resolution, uint32_t freq_hz, ledc_mode_t mode) {
   ledc_timer_config_t timer_conf = {
       .speed_mode = mode,
       .duty_resolution = resolution,
@@ -66,7 +65,7 @@ Timer& Timer::operator=(Timer&& other) noexcept {
 EspResult<void> Timer::reset() {
   if (timer_ != LEDC_TIMER_MAX) {
     ledc_timer_pause(mode_, timer_);
-    
+
     // Use ESP-IDF 5.x deconfigure flag to completely release the hardware timer
     ledc_timer_config_t timer_conf = {
         .speed_mode = mode_,
