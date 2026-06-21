@@ -44,6 +44,17 @@ EspResult<LedStrip> LedStrip::create_rmt(const RmtConfig& config) {
   return EspResult<LedStrip>::ok(LedStrip(handle));
 }
 
+EspResult<void> LedStrip::init_default(const RmtConfig& config) {
+  std::optional<LedStrip>& opt = default_optional();
+  if (opt) return ESP_ERR_INVALID_STATE;  // Already initialized
+  EspResult<LedStrip> result = HAL::LedStrip::create_rmt(config);
+  if (!result) {
+    return result.log_error("LedStrip", "Failed to init_default");
+  }
+  opt = std::move(*result);
+  return ESP_OK;
+}
+
 EspResult<void> LedStrip::reset() {
   if (handle_) {
     // Optionally clear before deleting so they don't stay lit

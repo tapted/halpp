@@ -6,8 +6,9 @@
 #pragma once
 
 #include <cstdint>
-#include <soc/gpio_num.h>
 #include <led_strip_types.h>
+#include <optional>
+#include <soc/gpio_num.h>
 
 #include "espbase/esp_result.hpp"
 
@@ -28,6 +29,11 @@ class LedStrip {
   constexpr LedStrip() = default;
   ~LedStrip() { reset(); }
 
+  static EspResult<LedStrip> create_rmt(const RmtConfig& config);
+  static LedStrip& default_instance() { return *default_optional(); }
+  static EspResult<void> init_default(const RmtConfig& config);
+  static void deinit_default() { default_optional().reset(); }
+
   // Can be moved. Not copied.
   LedStrip(const LedStrip&) = delete;
   LedStrip& operator=(const LedStrip&) = delete;
@@ -36,8 +42,6 @@ class LedStrip {
 
   explicit operator bool() const { return handle_ != nullptr; }
   bool operator!() const { return handle_ == nullptr; }
-
-  static EspResult<LedStrip> create_rmt(const RmtConfig& config);
 
   EspResult<void> reset();
 
@@ -54,6 +58,11 @@ class LedStrip {
   led_strip_handle_t handle_ = nullptr;
 
   explicit LedStrip(led_strip_handle_t handle) : handle_(handle) {}
+
+  static std::optional<LedStrip>& default_optional() {
+    static std::optional<LedStrip> inst;
+    return inst;
+  }
 };
 
 }  // namespace HAL

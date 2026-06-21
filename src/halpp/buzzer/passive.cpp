@@ -27,11 +27,6 @@ EspResult<void> Passive::init_default(Config config) {
   return opt->begin();
 }
 
-EspResult<void> Passive::deinit_default() {
-  default_optional().reset();
-  return ESP_OK;
-}
-
 EspResult<void> Passive::begin() {
   if (is_initialized()) return ESP_OK;
 

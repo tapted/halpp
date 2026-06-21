@@ -54,7 +54,7 @@ class Passive {
   // --- Pattern 2: Single-Device Default (init_default must be called first) ---
   static Passive& default_instance() { return *default_optional(); }
   static EspResult<void> init_default(Config config);
-  static EspResult<void> deinit_default();
+  static void deinit_default() { default_optional().reset(); }
 
   // Executes hardware initialization and spawns background FreeRTOS task
   EspResult<void> begin();
