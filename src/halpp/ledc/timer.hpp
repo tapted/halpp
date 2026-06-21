@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include <driver/gpio.h>
-#include <driver/ledc.h>
+#include <soc/gpio_num.h>
+#include <hal/ledc_types.h>
 
 #include "espbase/esp_result.hpp"
 

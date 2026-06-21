@@ -8,15 +8,16 @@
 #pragma once
 
 #include <cstdint>
-#include <driver/gpio.h>
-#include <driver/ledc.h>
 #include <optional>
+#include <soc/gpio_num.h>
 #include <span>
 
 #include "espbase/esp_result.hpp"
 #include "espbase/yielding_task.hpp"
 #include "halpp/ledc/channel.hpp"
 #include "halpp/ledc/timer.hpp"
+
+#include <hal/ledc_types.h>
 
 namespace HAL {
 

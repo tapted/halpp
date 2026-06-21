@@ -8,7 +8,7 @@
 #include "halpp/buzzer/passive.hpp"
 
 #include <algorithm>
-#include <optional>
+#include <driver/ledc.h>
 
 #include <hal/ledc_ll.h>
 

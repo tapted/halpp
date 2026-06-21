@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <driver/ledc.h>
+#include <hal/ledc_types.h>
 
 #include "espbase/esp_result.hpp"
 

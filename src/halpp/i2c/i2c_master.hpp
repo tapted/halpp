@@ -1,11 +1,10 @@
 #pragma once
 
+#include <cstdint>
 #include <driver/i2c_master.h>
 #include <esp_err.h>
-#include <stdint.h>
 
 #include "espbase/esp_result.hpp"
-
 #include "halpp/i2c/i2c_device.hpp"
 
 // ============================================================================

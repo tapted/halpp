@@ -1,5 +1,7 @@
 #include "halpp/ledc/timer.hpp"
 
+#include <driver/ledc.h>
+
 #include "halpp/ledc/channel.hpp"
 
 namespace HAL {

@@ -1,5 +1,7 @@
 #include "halpp/ledc/channel.hpp"
 
+#include <driver/ledc.h>
+
 namespace HAL {
 
 Channel::Channel(Channel&& other) noexcept {
