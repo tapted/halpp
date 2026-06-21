@@ -1,11 +1,12 @@
 #pragma once
 
 #include <cstdint>
-#include <driver/i2c_master.h>
 #include <esp_err.h>
 
 #include "espbase/esp_result.hpp"
 #include "halpp/i2c/i2c_device.hpp"
+
+#include <hal/i2c_types.h>
 
 // ============================================================================
 // I2C Master Driver Class
@@ -27,7 +28,8 @@ class I2CMaster {
 
   // Device management (for creating device handles)
   EspResult<I2CDevice> add_device(uint8_t device_addr, uint32_t scl_speed_hz = 0,
-                                  i2c_device_config_t* dev_config = nullptr);
+                                  uint32_t scl_wait_us = 0,
+                                  i2c_addr_bit_len_t dev_addr_length = I2C_ADDR_BIT_LEN_7);
 
   // Get bus handle (for advanced usage)
   i2c_master_bus_handle_t get_bus_handle() { return _bus_handle; }

@@ -1,6 +1,7 @@
 #include "halpp/i2c/i2c_master.hpp"
 
 #include <cstring>
+#include <driver/i2c_master.h>
 #include <esp_log.h>
 
 #include "hal/board.hpp"
@@ -91,22 +92,20 @@ esp_err_t I2CMaster::_deinit() {
 // ============================================================================
 
 EspResult<I2CDevice> I2CMaster::add_device(uint8_t device_addr, uint32_t scl_speed_hz,
-                                           i2c_device_config_t* dev_config) {
+                                           uint32_t scl_wait_us,
+                                           i2c_addr_bit_len_t dev_addr_length) {
   if (!_initialized) {
     ESP_LOGE(TAG, "I2C not initialized");
     return ESP_ERR_INVALID_STATE;
   }
 
-  i2c_device_config_t config;
-  if (dev_config) {
-    config = *dev_config;
-  } else {
-    // Use default configuration
-    memset(&config, 0, sizeof(config));
-    config.dev_addr_length = I2C_ADDR_BIT_LEN_7;
-    config.device_address = device_addr;
-    config.scl_speed_hz = scl_speed_hz == 0 ? I2CConfig::CLK_SPEED : scl_speed_hz;
-  }
+  i2c_device_config_t config = {
+      .dev_addr_length = dev_addr_length,
+      .device_address = device_addr,
+      .scl_speed_hz = scl_speed_hz == 0 ? I2CConfig::CLK_SPEED : scl_speed_hz,
+      .scl_wait_us = scl_wait_us,
+      .flags = {.disable_ack_check = 0},
+  };
 
   i2c_master_dev_handle_t raw_handle = nullptr;
   esp_err_t ret = i2c_master_bus_add_device(_bus_handle, &config, &raw_handle);

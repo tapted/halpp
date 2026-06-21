@@ -7,7 +7,6 @@
 #include "espbase/esp_result.hpp"
 #include "halpp/i2c/i2c_device.hpp"
 
-
 namespace HAL {
 
 class I2C7Seg {
