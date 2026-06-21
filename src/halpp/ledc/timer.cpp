@@ -65,6 +65,8 @@ Timer& Timer::operator=(Timer&& other) noexcept {
 
 EspResult<void> Timer::reset() {
   if (timer_ != LEDC_TIMER_MAX) {
+    ledc_timer_pause(mode_, timer_);
+    
     // Use ESP-IDF 5.x deconfigure flag to completely release the hardware timer
     ledc_timer_config_t timer_conf = {
         .speed_mode = mode_,
