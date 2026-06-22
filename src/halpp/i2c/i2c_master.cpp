@@ -8,7 +8,9 @@
 
 namespace I2CConfig = HAL::I2CConfig;
 
-static const char* TAG = "I2C_Master";
+namespace {
+static constexpr char TAG[] = "I2C_Master";
+}
 
 bool I2CMaster::_initialized = false;
 I2CMaster::I2CMaster() {
