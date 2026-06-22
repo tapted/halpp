@@ -1,0 +1,54 @@
+#pragma once
+
+#include <cstdint>
+#include <esp_event_base.h>
+#include <esp_netif_types.h>
+
+#include "espbase/esp_result.hpp"
+
+namespace HAL {
+
+// The Wi-Fi Station Config.
+struct WifiConfig {
+  const char* ssid = nullptr;
+  const char* password = nullptr;
+  bool auto_reconnect = true;
+
+  // Decoupled Event Callbacks
+  void (*on_got_ip)(const esp_netif_ip_info_t& ip_info, void* ctx) = nullptr;
+  void (*on_disconnected)(void* ctx) = nullptr;
+  void* ctx = nullptr;  // Opaque pointer to the owning class
+};
+
+// The Wi-Fi Station Handle
+class WifiSta {
+ public:
+  constexpr WifiSta() = default;
+  ~WifiSta() { reset(); }
+
+  // Pinned in memory to guarantee the OS event loop never has a dangling 'this' pointer
+  WifiSta(const WifiSta&) = delete;
+  WifiSta& operator=(const WifiSta&) = delete;
+  WifiSta(WifiSta&&) = delete;
+  WifiSta& operator=(WifiSta&&) = delete;
+
+  EspResult<void> start(const WifiConfig& config);
+  void reset();
+
+  EspResult<void> disconnect();
+  EspResult<void> reconnect();  // Manual trigger if auto_reconnect is false
+
+ private:
+  esp_netif_t* netif_sta_ = nullptr;
+  esp_event_handler_instance_t wifi_handler_ = nullptr;
+  esp_event_handler_instance_t ip_handler_ = nullptr;
+
+  WifiConfig config_;
+  bool initialized_ = false;
+
+  // Static trampoline to route C-events back to the C++ object instance
+  static void event_trampoline(void* arg, esp_event_base_t event_base, int32_t event_id,
+                               void* event_data);
+};
+
+}  // namespace HAL
