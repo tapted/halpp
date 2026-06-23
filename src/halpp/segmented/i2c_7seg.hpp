@@ -52,6 +52,9 @@ class I2C7Seg {
   void print_number(int n);
   void print_float(double n, uint8_t frac_digits = 2);
 
+  // Shows the time using gettimeofday. Returns the number of milliseconds until the next second boundary.
+  uint32_t show_time();
+
  private:
   I2CDevice i2c_dev_;
   std::array<uint16_t, 8> display_buffer_{0};

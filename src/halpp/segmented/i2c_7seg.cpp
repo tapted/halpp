@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <ctime>
+#include <sys/time.h>
 
 #include "halpp/i2c/i2c_master.hpp"
 
@@ -151,6 +153,48 @@ void I2C7Seg::print_float(double n, uint8_t frac_digits) {
   // The "%.*f" specifier allows us to pass precision dynamically via an argument
   snprintf(buf, sizeof(buf), "%.*f", frac_digits, n);
   print(buf);
+}
+
+uint32_t I2C7Seg::show_time() {
+  draw_colon(true);
+  // Get high-precision system time
+  struct timeval tv;
+  gettimeofday(&tv, nullptr);
+
+  // Format and render to the display
+  time_t now = tv.tv_sec;
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
+
+  print_number(timeinfo.tm_hour * 100 + timeinfo.tm_min);
+  write_display().log_error(TAG, "Failed to update time display");
+
+  ESP_LOGI(TAG, "Current time: %02d:%02d:%02d.%03ld", timeinfo.tm_hour, timeinfo.tm_min,
+           timeinfo.tm_sec, tv.tv_usec / 1000);
+  
+  // Safety Margin (Target 50ms past the second)
+  constexpr uint32_t TARGET_OFFSET_MS = 50;
+  // Calculate exactly how many milliseconds we are into the current minute
+  // tm_sec is 0-59. tv_usec is 0-999999.
+  uint32_t ms_passed_in_minute = (timeinfo.tm_sec * 1000) + (tv.tv_usec / 1000);
+
+  uint32_t delay_ms;
+
+  // Calculate delay to the next target offset
+  if (ms_passed_in_minute < TARGET_OFFSET_MS) {
+    // We woke up fractions of a millisecond early (e.g. at 00:00.010). 
+    // Wait the remaining 40ms to clear the safety margin.
+    delay_ms = TARGET_OFFSET_MS - ms_passed_in_minute;
+  } else {
+    // We are safely past the offset. Wait until the NEXT minute's offset.
+    // A full minute is 60,000 milliseconds.
+    delay_ms = 60000 - ms_passed_in_minute + TARGET_OFFSET_MS;
+  }
+
+  // Fallback safeguard: prevent 0ms spins
+  if (delay_ms == 0) delay_ms = 60000;
+
+  return delay_ms;
 }
 
 }  // namespace HAL
