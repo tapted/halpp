@@ -7,6 +7,8 @@
 #include "espbase/esp_result.hpp"
 #include "halpp/i2c/i2c_device.hpp"
 
+struct tm;
+
 namespace HAL {
 
 class I2C7Seg {
@@ -53,7 +55,7 @@ class I2C7Seg {
   void print_float(double n, uint8_t frac_digits = 2);
 
   // Shows the time using gettimeofday. Returns the number of milliseconds until the next second boundary.
-  uint32_t show_time();
+  uint32_t show_time(tm* timeinfo_out = nullptr);
 
  private:
   I2CDevice i2c_dev_;

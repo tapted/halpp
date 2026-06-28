@@ -155,7 +155,7 @@ void I2C7Seg::print_float(double n, uint8_t frac_digits) {
   print(buf);
 }
 
-uint32_t I2C7Seg::show_time() {
+uint32_t I2C7Seg::show_time(tm* timeinfo_out) {
   draw_colon(true);
   // Get high-precision system time
   struct timeval tv;
@@ -165,6 +165,10 @@ uint32_t I2C7Seg::show_time() {
   time_t now = tv.tv_sec;
   struct tm timeinfo;
   localtime_r(&now, &timeinfo);
+
+  if (timeinfo_out) {
+    *timeinfo_out = timeinfo;
+  }
 
   print_number(timeinfo.tm_hour * 100 + timeinfo.tm_min);
   write_display().log_error(TAG, "Failed to update time display");
