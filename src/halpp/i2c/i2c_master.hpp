@@ -12,7 +12,7 @@
 // I2C Master Driver Class
 // ============================================================================
 class I2CMaster {
-  static bool _initialized;
+  static bool _initialized;  // Guards static deinit() to avoid creating the singleton.
   esp_err_t _deinit();
 
  public:
@@ -21,10 +21,6 @@ class I2CMaster {
     return inst;
   }
   static esp_err_t deinit() { return _initialized ? instance()._deinit() : ESP_OK; }
-
-  // Initialization
-  esp_err_t init(bool scan_devices = false);
-  bool is_initialized() const { return _initialized; }
 
   // Device management (for creating device handles)
   EspResult<I2CDevice> add_device(uint8_t device_addr, uint32_t scl_speed_hz = 0,
@@ -42,7 +38,7 @@ class I2CMaster {
 
  private:
   I2CMaster();
-  ~I2CMaster();
+  ~I2CMaster();  // Never invoked.
 
   i2c_master_bus_handle_t _bus_handle = nullptr;
 };

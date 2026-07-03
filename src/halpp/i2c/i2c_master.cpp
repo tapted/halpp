@@ -1,6 +1,5 @@
 #include "halpp/i2c/i2c_master.hpp"
 
-#include <cstring>
 #include <driver/i2c_master.h>
 #include <esp_log.h>
 
@@ -13,27 +12,9 @@ static constexpr char TAG[] = "I2C_Master";
 }
 
 bool I2CMaster::_initialized = false;
+
 I2CMaster::I2CMaster() {
-  init();
-}
-
-I2CMaster::~I2CMaster() {
-  _deinit();
-}
-
-// ============================================================================
-// Initialization
-// ============================================================================
-
-esp_err_t I2CMaster::init(bool scan_devices) {
-  if (_initialized) {
-    ESP_LOGW(TAG, "I2C master already initialized");
-    return ESP_OK;
-  }
-
   ESP_LOGI(TAG, "Initializing I2C master bus...");
-
-  // Configure I2C bus
   i2c_master_bus_config_t bus_config = {
       .i2c_port = I2CConfig::BUS_NUM,
       .sda_io_num = I2CConfig::PIN_SDA,
@@ -49,43 +30,25 @@ esp_err_t I2CMaster::init(bool scan_devices) {
           },
   };
 
-  // Create I2C master bus
-  esp_err_t ret = i2c_new_master_bus(&bus_config, &_bus_handle);
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to create I2C master bus: %s", esp_err_to_name(ret));
-    return ret;
+  if (EspError err = i2c_new_master_bus(&bus_config, &_bus_handle)) {
+    err.log(TAG, "Failed to create I2C master bus");
+    return;
   }
-
   _initialized = true;
-  ESP_LOGI(TAG, "I2C master initialized successfully (SDA:%d, SCL:%d)", I2CConfig::PIN_SDA,
-           I2CConfig::PIN_SCL);
-  if (scan_devices) {
-    uint8_t found_devices[128];
-    size_t count = 0;
-    ret = scan(found_devices, &count, 128);
-    if (ret != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to scan I2C bus: %s", esp_err_to_name(ret));
-    }
-  }
-  return ESP_OK;
+}
+
+I2CMaster::~I2CMaster() {
+  // Never reached.
 }
 
 esp_err_t I2CMaster::_deinit() {
-  if (!_initialized) {
-    return ESP_OK;
-  }
-
   if (_bus_handle) {
-    esp_err_t ret = i2c_del_master_bus(_bus_handle);
-    if (ret != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to delete I2C master bus: %s", esp_err_to_name(ret));
-      return ret;
+    if (EspError err = i2c_del_master_bus(_bus_handle)) {
+      return err.log(TAG, "Failed to delete I2C master bus");
     }
     _bus_handle = nullptr;
+    ESP_LOGI(TAG, "I2C master deinitialized");
   }
-
-  _initialized = false;
-  ESP_LOGI(TAG, "I2C master deinitialized");
   return ESP_OK;
 }
 
@@ -96,7 +59,7 @@ esp_err_t I2CMaster::_deinit() {
 EspResult<I2CDevice> I2CMaster::add_device(uint8_t device_addr, uint32_t scl_speed_hz,
                                            uint32_t scl_wait_us,
                                            i2c_addr_bit_len_t dev_addr_length) {
-  if (!_initialized) {
+  if (!_bus_handle) {
     ESP_LOGE(TAG, "I2C not initialized");
     return ESP_ERR_INVALID_STATE;
   }
@@ -119,13 +82,8 @@ EspResult<I2CDevice> I2CMaster::add_device(uint8_t device_addr, uint32_t scl_spe
 // Utility Functions
 // ============================================================================
 esp_err_t I2CMaster::wait_all_done(uint32_t timeout_ms) {
-  if (!_initialized) {
+  if (!_bus_handle) {
     ESP_LOGE(TAG, "I2C not initialized");
-    return ESP_ERR_INVALID_STATE;
-  }
-
-  if (_bus_handle == nullptr) {
-    ESP_LOGE(TAG, "I2C bus not initialized");
     return ESP_ERR_INVALID_STATE;
   }
 
@@ -133,7 +91,7 @@ esp_err_t I2CMaster::wait_all_done(uint32_t timeout_ms) {
 }
 
 esp_err_t I2CMaster::reset() {
-  if (!_initialized) {
+  if (!_bus_handle) {
     ESP_LOGE(TAG, "I2C not initialized");
     return ESP_ERR_INVALID_STATE;
   }
@@ -141,7 +99,7 @@ esp_err_t I2CMaster::reset() {
 }
 
 esp_err_t I2CMaster::probe(uint8_t device_addr) {
-  if (!_initialized) {
+  if (!_bus_handle) {
     ESP_LOGE(TAG, "I2C not initialized");
     return ESP_ERR_INVALID_STATE;
   }
@@ -150,7 +108,7 @@ esp_err_t I2CMaster::probe(uint8_t device_addr) {
 }
 
 esp_err_t I2CMaster::scan(uint8_t* found_devices, size_t* count, size_t max_count) const {
-  if (!_initialized) {
+  if (!_bus_handle) {
     ESP_LOGE(TAG, "I2C not initialized");
     return ESP_ERR_INVALID_STATE;
   }
