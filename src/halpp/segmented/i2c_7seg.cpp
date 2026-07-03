@@ -175,7 +175,7 @@ uint32_t I2C7Seg::show_time(tm* timeinfo_out) {
 
   ESP_LOGI(TAG, "Current time: %02d:%02d:%02d.%03ld", timeinfo.tm_hour, timeinfo.tm_min,
            timeinfo.tm_sec, tv.tv_usec / 1000);
-  
+
   // Safety Margin (Target 50ms past the second)
   constexpr uint32_t TARGET_OFFSET_MS = 50;
   // Calculate exactly how many milliseconds we are into the current minute
@@ -186,7 +186,7 @@ uint32_t I2C7Seg::show_time(tm* timeinfo_out) {
 
   // Calculate delay to the next target offset
   if (ms_passed_in_minute < TARGET_OFFSET_MS) {
-    // We woke up fractions of a millisecond early (e.g. at 00:00.010). 
+    // We woke up fractions of a millisecond early (e.g. at 00:00.010).
     // Wait the remaining 40ms to clear the safety margin.
     delay_ms = TARGET_OFFSET_MS - ms_passed_in_minute;
   } else {

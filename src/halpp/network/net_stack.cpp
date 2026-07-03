@@ -11,8 +11,8 @@ namespace HAL {
 
 EspResult<void> NetStack::start() {
   if (initialized_) return ESP_ERR_INVALID_STATE;
-  if (EspError err = EspError::check(esp_netif_init())) return err.log(TAG, "esp_netif_init");
-  if (EspError err = EspError::check(esp_event_loop_create_default()))
+  if (EspError err = esp_netif_init()) return err.log(TAG, "esp_netif_init");
+  if (EspError err = esp_event_loop_create_default())
     return err.log(TAG, "esp_event_loop_create_default");
   initialized_ = true;
   return ESP_OK;

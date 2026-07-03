@@ -11,7 +11,7 @@ static std::optional<uint32_t> clock_update_step(YieldingTask<ClockTask::TaskDat
   ClockTask::TaskData* alarms = task.data();
   for (size_t i = 0; i < alarms->alarms_hhmmss.size(); ++i) {
     if (!alarms->on_alarm) continue;
-    
+
     uint32_t alarm_hhmmss = alarms->alarms_hhmmss[i];
     uint8_t enabled = (alarm_hhmmss >> 24) & 0x01;
     if (!enabled) continue;
@@ -28,12 +28,8 @@ static std::optional<uint32_t> clock_update_step(YieldingTask<ClockTask::TaskDat
 }
 
 void ClockTask::on_time_synced() {
-  if (task_.running()) {
-    task_.notify();
-  } else {
-    // Empricially, we need 108 bytes right now. 512 is plenty if there's no logging.
-    // Problem: interrupts can randomly take over the task and cause a stack overflow. Humph.
-    constexpr TaskConfig config = {.name = "clock_task", .stack_size = 2048, .priority = 3};
-    task_.start(config, &alarms_, clock_update_step);
-  }
+  // Empricially, we need 108 bytes right now. 512 is plenty if there's no logging.
+  // Problem: interrupts can randomly take over the task and cause a stack overflow. Humph.
+  constexpr TaskConfig config = {.name = "clock_task", .stack_size = 2048, .priority = 3};
+  task_.start(config, &alarms_, clock_update_step);
 }
