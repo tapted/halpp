@@ -37,13 +37,20 @@ class Passive {
     gpio_num_t gpio_num;
     ledc_timer_t timer_num = LEDC_TIMER_0;
     ledc_channel_t channel = LEDC_CHANNEL_0;
+#ifdef HALPP_USE_XTAL_FOR_BUZZER
+    ledc_clk_cfg_t clk_cfg = LEDC_USE_XTAL_CLK;
     ledc_timer_bit_t timer_bit = LEDC_TIMER_13_BIT;
+#else
+    // Default to RC_FAST. The APB clock is affected by light sleep and frequency scaling. XTAL is
+    // fixed at 40MHz which gives a max tone of 4,882Hz with 13-bit resolution. The APB clock would
+    // double that, but it would be affected by power management. But XTAL wants to power down
+    // during light sleep. RC_FAST is 17.5MHz (approximately - it drifts), so not great for music
+    // but OK for buzzers.
+    ledc_clk_cfg_t clk_cfg = LEDC_USE_RC_FAST_CLK;
+    ledc_timer_bit_t timer_bit = LEDC_TIMER_10_BIT;
+#endif
     ledc_mode_t speed_mode = LEDC_LOW_SPEED_MODE;
 
-    // Default to XTAL. The APB clock is affected by light sleep and frequency scaling. XTAL is
-    // fixed at 40MHz which gives a max tone of 4,882Hz with 13-bit resolution. The APB clock would
-    // double that, but it would be affected by power management.
-    ledc_clk_cfg_t clk_cfg = LEDC_USE_XTAL_CLK;
     uint32_t idle_level = 0;
   };
 

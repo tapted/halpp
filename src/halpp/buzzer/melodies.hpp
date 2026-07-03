@@ -62,4 +62,58 @@ constexpr auto build_mo_li_hua() {
 
 inline constexpr auto mo_li_hua = internal::build_mo_li_hua();
 
+// Acoustic Frequencies (Equal Temperament)
+constexpr uint32_t REST = 0;
+constexpr uint32_t N_FS4 = 370; // F#4
+constexpr uint32_t N_A4  = 440; // A4
+constexpr uint32_t N_B4  = 494; // B4
+constexpr uint32_t N_CS5 = 554; // C#5
+constexpr uint32_t N_D5  = 587; // D5
+constexpr uint32_t N_E5  = 659; // E5
+
+// Imagine Dragons - Radioactive (Chorus)
+// Tempo: ~136 BPM. 
+// Note: We use 180ms play + 40ms rest for 8th notes to force the piezo to 
+// physically stop vibrating, creating the "staccato" vocal articulation.
+constexpr std::array<Note, 52> radioactive_riff = {{
+    // "I'm wak-ing up..."
+    { N_B4, 180 }, { REST, 40 },
+    { N_B4, 180 }, { REST, 40 },
+    { N_B4, 180 }, { REST, 40 },
+    { N_B4, 180 }, { REST, 40 },
+    
+    // "to ash and dust"
+    { N_B4,  180 }, { REST, 40 },
+    { N_A4,  180 }, { REST, 40 },
+    { N_FS4, 180 }, { REST, 40 },
+    { N_A4,  400 }, { REST, 40 },
+    { REST,  200 }, // Breath pause
+    
+    // "I wipe my brow..."
+    { N_B4, 180 }, { REST, 40 },
+    { N_B4, 180 }, { REST, 40 },
+    { N_B4, 180 }, { REST, 40 },
+    { N_B4, 180 }, { REST, 40 },
+    
+    // "and I sweat my rust"
+    { N_B4,  180 }, { REST, 40 },
+    { N_A4,  180 }, { REST, 40 },
+    { N_FS4, 180 }, { REST, 40 },
+    { N_A4,  180 }, { REST, 40 },
+    { N_B4,  400 }, { REST, 40 },
+    { REST,  200 }, // Breath pause
+
+    // "I'm breath-ing in..."
+    { N_B4, 180 }, { REST, 40 },
+    { N_B4, 180 }, { REST, 40 },
+    { N_B4, 180 }, { REST, 40 },
+    { N_B4, 180 }, { REST, 40 },
+
+    // "the chem-i-cals..."
+    { N_D5,  200 }, { REST, 20 },
+    { N_D5,  200 }, { REST, 20 },
+    { N_CS5, 200 }, { REST, 20 },
+    { N_B4,  600 }, { REST, 100 }
+}};
+
 }  // namespace HAL::melodies

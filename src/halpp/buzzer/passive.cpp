@@ -107,12 +107,32 @@ void Passive::set_hardware_note(uint32_t frequency, float volume) {
     pwm_channel_.stop();
     return;
   }
+#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
+  constexpr uint32_t rc_fast_clock_hz = 17500000;  // ~17.5 MHz
+#else
+  constexpr uint32_t rc_fast_clock_hz = 8500000;
+#endif
+  uint32_t source_clock_hz = 0;
+  if (config_.clk_cfg == LEDC_USE_RC_FAST_CLK) {
+    source_clock_hz = rc_fast_clock_hz;
+  } else if (config_.clk_cfg == LEDC_USE_APB_CLK) {
+    source_clock_hz = 80000000;  // 80 MHz
+  } else if (config_.clk_cfg == LEDC_USE_XTAL_CLK) {
+    source_clock_hz = 40000000;  // XTAL is 40 MHz
+  } else {
+    source_clock_hz = rc_fast_clock_hz;  // possibly LEDC_AUTO_CLK - be conservative
+  }
 
-  frequency =
-      std::clamp<uint32_t>(frequency, 1ul << LEDC_LL_FRACTIONAL_BITS, 1ul << config_.timer_bit);
+  // Dynamically calculate the absolute hardware ceiling
+  uint32_t max_hw_freq = source_clock_hz / (1 << config_.timer_bit);
+
+  // Clamp safely between acoustic floor and hardware ceiling
+  frequency = std::clamp<uint32_t>(frequency, 20, max_hw_freq);
+
+  // Acoustic Duty Cycle Math (50% maximum = peak volume)
   volume = std::clamp(volume, 0.0f, 1.0f);
-
-  uint32_t duty = (1 << config_.timer_bit) * volume;
+  uint32_t max_acoustic_duty = (1 << config_.timer_bit) / 2;
+  uint32_t duty = max_acoustic_duty * volume;
 
   pwm_channel_.set_duty(duty);
   pwm_channel_.update_duty();
