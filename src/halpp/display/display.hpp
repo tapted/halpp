@@ -6,13 +6,9 @@
 #pragma once
 
 #include <cstdint>
+#include <esp_lcd_types.h>
 
 #include "espbase/esp_result.hpp"
-
-struct esp_lcd_panel_io_t;
-struct esp_lcd_panel_t;
-typedef struct esp_lcd_panel_io_t *esp_lcd_panel_io_handle_t;
-typedef struct esp_lcd_panel_t *esp_lcd_panel_handle_t;       
 
 namespace HAL {
 
@@ -29,12 +25,6 @@ class Display {
   Display() = default;
   explicit Display(Config config) : config_(config) {}
   virtual ~Display() { reset(); }
-
-  // Strict ownership semantics
-  Display(const Display&) = delete;
-  Display& operator=(const Display&) = delete;
-  Display(Display&& other) noexcept;
-  Display& operator=(Display&& other) noexcept;
 
   bool is_initialized() const { return panel_handle_ != nullptr; }
   uint16_t width() const { return config_.width; }
@@ -54,6 +44,16 @@ class Display {
  protected:
   Config config_;
   esp_lcd_panel_handle_t panel_handle_ = nullptr;
+
+  static bool on_color_trans_done(esp_lcd_panel_io_handle_t panel_io,
+                                  esp_lcd_panel_io_event_data_t* edata, void* user_ctx);
+
+ private:
+  // Non-copyable, non-movable, so we can pass `this` as user_ctx.
+  Display(const Display&) = delete;
+  Display& operator=(const Display&) = delete;
+  Display(Display&& other) = delete;
+  Display& operator=(Display&& other) = delete;
 };
 
 }  // namespace HAL

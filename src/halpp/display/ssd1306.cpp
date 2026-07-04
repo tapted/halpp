@@ -24,8 +24,8 @@ EspResult<void> Ssd1306::init_default_i2c(uint8_t i2c_address, uint16_t width, u
       .dc_bit_offset = 6,  // Crucial: Tells the IO layer where the Data/Command bit lives
       .lcd_cmd_bits = 8,
       .lcd_param_bits = 8,
-      .on_color_trans_done = nullptr,
-      .user_ctx = nullptr,
+      .on_color_trans_done = Display::on_color_trans_done,
+      .user_ctx = &inst,
       .flags =
           {
               .dc_low_on_data = 0,

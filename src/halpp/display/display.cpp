@@ -7,22 +7,10 @@
 
 namespace HAL {
 
-Display::Display(Display&& other) noexcept {
-  config_ = other.config_;
-  panel_handle_ = other.panel_handle_;
-  other.panel_handle_ = nullptr;
-  other.config_.io_handle = nullptr;
-}
-
-Display& Display::operator=(Display&& other) noexcept {
-  if (this != &other) {
-    reset();
-    config_ = other.config_;
-    panel_handle_ = other.panel_handle_;
-    other.panel_handle_ = nullptr;
-    other.config_.io_handle = nullptr;
-  }
-  return *this;
+// static
+bool Display::on_color_trans_done(esp_lcd_panel_io_handle_t panel_io,
+                                  esp_lcd_panel_io_event_data_t* edata, void* user_ctx) {
+  return false;  // No high-priority task woken up by this callback.
 }
 
 EspResult<void> Display::reset() {
