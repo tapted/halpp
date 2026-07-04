@@ -48,11 +48,11 @@ EspResult<void> Display::init_lvgl() {
   const size_t buffer_bytes = (buffer_pixels * config_.bits_per_pixel + 7) / 8 + LVGL_OVERHEAD;
 
   // 2. Allocate DMA-capable memory
-  void* buf1 = heap_caps_malloc(buffer_bytes, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+  void* buf1 = heap_caps_aligned_alloc(32, buffer_bytes, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
   void* buf2 = nullptr;
 
   if (LVGLConfig::DOUBLE_BUFFERED) {
-    buf2 = heap_caps_malloc(buffer_bytes, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+    buf2 = heap_caps_aligned_alloc(32, buffer_bytes, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
   }
 
   if (!buf1 || (LVGLConfig::DOUBLE_BUFFERED && !buf2)) {
@@ -90,11 +90,35 @@ EspResult<void> Display::init_lvgl() {
         const int w = area->x2 - area->x1 + 1;
         const int h = area->y2 - area->y1 + 1;
 
-        // We explicitly ask LVGL what the padded stride is for this specific area update
-        uint32_t lv_stride = lv_draw_buf_width_to_stride(w, lv_display_get_color_format(disp));
-
-        // px_map is now a raw byte pointer in v9, perfectly matching our draw_bitmap signature
-        display->draw_bitmap(area->x1, area->y1, w, h, px_map, lv_stride);
+        lv_color_format_t cf = lv_display_get_color_format(disp);
+        uint32_t lv_stride = lv_draw_buf_width_to_stride(w, cf);
+        size_t palette_bytes = 0;
+        // Isolate LVGL 9's palette header based on the exact Indexed format
+        // LVGL prepends ARGB8888 (4-byte) colors for every indexed state
+        switch (cf) {
+          case LV_COLOR_FORMAT_I1:
+            palette_bytes = 2 * 4;
+            break;
+          case LV_COLOR_FORMAT_I2:
+            palette_bytes = 4 * 4;
+            break;
+          case LV_COLOR_FORMAT_I4:
+            palette_bytes = 16 * 4;
+            break;
+          case LV_COLOR_FORMAT_I8:
+            palette_bytes = 256 * 4;
+            break;
+          default:
+            break;
+        }
+        
+        if (palette_bytes > 0) {
+          const uint8_t* palette = px_map;
+          const uint8_t* pixels = px_map + palette_bytes;  // Cleanly advance past the header
+          display->draw_indexed_bitmap(area->x1, area->y1, w, h, pixels, palette, lv_stride);
+        } else {
+          display->draw_bitmap(area->x1, area->y1, w, h, px_map, lv_stride);
+        }
 
         // We do NOT call lv_display_flush_ready here, because the DMA engine
         // will trigger on_color_trans_done() when the hardware actually finishes!
@@ -191,6 +215,14 @@ EspResult<void> Display::draw_bitmap(int x_start, int y_start, int width, int he
   // We ignore the stride here because esp_lcd expects contiguous bounding boxes.
   return esp_lcd_panel_draw_bitmap(panel_handle_, x_start, y_start, x_start + width,
                                    y_start + height, color_data);
+}
+
+EspResult<void> Display::draw_indexed_bitmap(int x_start, int y_start, int width, int height,
+                                             const void* pixel_data, const void* /*palette*/,
+                                             uint32_t stride_bytes) {
+  // Default fallback: Ignore the palette and just draw the raw pixel data.
+  // Subclasses that need the palette (like multi-color e-Paper) can override this!
+  return draw_bitmap(x_start, y_start, width, height, pixel_data, stride_bytes);
 }
 
 void Display::on_lvgl_init(lv_display_t*) {

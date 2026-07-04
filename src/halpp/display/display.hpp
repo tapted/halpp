@@ -50,6 +50,11 @@ class Display {
   // Virtualized so subclasses can intercept and transpose raw data (like SSD1306)
   virtual EspResult<void> draw_bitmap(int x_start, int y_start, int width, int height,
                                       const void* color_data, uint32_t stride_bytes = 0);
+                                      
+  // New hook for LVGL indexed formats (cleanly separates the ARGB8888 palette from the pixels)
+  virtual EspResult<void> draw_indexed_bitmap(int x_start, int y_start, int width, int height,
+                                              const void* pixel_data, const void* palette,
+                                              uint32_t stride_bytes = 0);
 
   // Optional hook for subclasses to inject hardware-specific LVGL events (like coordinate rounding)
   virtual void on_lvgl_init(lv_display_t* disp);

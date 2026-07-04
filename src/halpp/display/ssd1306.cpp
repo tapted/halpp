@@ -94,8 +94,7 @@ EspResult<void> Ssd1306::begin() {
 
   if (EspError err = esp_lcd_panel_init(panel_handle_)) return err;
 
-  invert(true);
-  // swap_xy(true);
+  invert(true);  // Invert in hardware for now. We maybe need to read the lvgl palette properly.
 
   // Ensure RAM doesn't show static on boot
   if (config_.width == 128 && config_.height == 64) {
@@ -116,8 +115,6 @@ EspResult<void> Ssd1306::begin() {
 EspResult<void> Ssd1306::draw_bitmap(int x, int y, int w, int h, const void* color_data,
                                      uint32_t stride) {
   if (!panel_handle_) return ESP_ERR_INVALID_STATE;
-
-  ESP_LOGI(TAG, "Drawing bitmap at (%d,%d) size %dx%d with stride %u", x, y, w, h, stride);
 
   // If no stride was provided (e.g. standard user call), assume tightly packed
   if (stride == 0) stride = (w + 7) / 8;
@@ -167,11 +164,6 @@ void Ssd1306::on_lvgl_init(lv_display_t* disp) {
         if (area) {
           area->y1 = area->y1 & ~0x7;   // Round down to nearest 8
           area->y2 = (area->y2 | 0x7);  // Round up to nearest 8
-          // // Troubleshooting: expand to the full screen every time.
-          // area->y1 = 0;
-          // area->y2 = 64;
-          // area->x1 = 0;
-          // area->x2 = 128;
         }
       },
       LV_EVENT_INVALIDATE_AREA, nullptr);
