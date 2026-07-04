@@ -30,7 +30,7 @@ class Display {
   virtual ~Display() { reset(); }
 
   bool is_initialized() const { return panel_handle_ != nullptr; }
-  
+
   EspResult<void> init_lvgl();
   lv_display_t* get_lv_display() const { return lv_display_; }
 
@@ -39,14 +39,20 @@ class Display {
 
   // --- Universal Drawing Primitives ---
   EspResult<void> reset();
-  EspResult<void> draw_bitmap(int x_start, int y_start, int width, int height,
-                              const void* color_data);
   EspResult<void> set_display_state(bool on);
   EspResult<void> invert(bool inverted);
+  EspResult<void> swap_xy(bool swap);
 
   // Fills a rectangle safely using a fixed-size DMA chunking buffer
   EspResult<void> fill_rect(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h, uint32_t color);
   EspResult<void> clear();
+
+  // Virtualized so subclasses can intercept and transpose raw data (like SSD1306)
+  virtual EspResult<void> draw_bitmap(int x_start, int y_start, int width, int height,
+                                      const void* color_data, uint32_t stride_bytes = 0);
+
+  // Optional hook for subclasses to inject hardware-specific LVGL events (like coordinate rounding)
+  virtual void on_lvgl_init(lv_display_t* disp);
 
  protected:
   Config config_;

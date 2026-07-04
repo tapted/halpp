@@ -42,9 +42,10 @@ EspResult<void> Display::init_lvgl() {
   lv_tick_set_cb(halpp_lvgl_tick_cb);
 
   // 1. Calculate Buffer Size dynamically via halpp_board.hpp overrides
+  constexpr size_t LVGL_OVERHEAD = 128;  // sizeof(lv_draw_buf_t)
   const uint32_t pixels_per_screen = config_.width * config_.height;
   const uint32_t buffer_pixels = pixels_per_screen / LVGLConfig::BUFFER_FRACTION;
-  const size_t buffer_bytes = (buffer_pixels * config_.bits_per_pixel + 7) / 8;
+  const size_t buffer_bytes = (buffer_pixels * config_.bits_per_pixel + 7) / 8 + LVGL_OVERHEAD;
 
   // 2. Allocate DMA-capable memory
   void* buf1 = heap_caps_malloc(buffer_bytes, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
@@ -76,6 +77,8 @@ EspResult<void> Display::init_lvgl() {
     ESP_LOGW(TAG, "Unsupported BPP for LVGL auto-config");
   }
 
+  on_lvgl_init(lv_display_);  // Hook for subclasses.
+
   // 5. Assign buffers (LVGL 9 expects size in BYTES, not pixels!)
   lv_display_set_buffers(lv_display_, buf1, buf2, buffer_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
 
@@ -87,8 +90,11 @@ EspResult<void> Display::init_lvgl() {
         const int w = area->x2 - area->x1 + 1;
         const int h = area->y2 - area->y1 + 1;
 
+        // We explicitly ask LVGL what the padded stride is for this specific area update
+        uint32_t lv_stride = lv_draw_buf_width_to_stride(w, lv_display_get_color_format(disp));
+
         // px_map is now a raw byte pointer in v9, perfectly matching our draw_bitmap signature
-        display->draw_bitmap(area->x1, area->y1, w, h, px_map);
+        display->draw_bitmap(area->x1, area->y1, w, h, px_map, lv_stride);
 
         // We do NOT call lv_display_flush_ready here, because the DMA engine
         // will trigger on_color_trans_done() when the hardware actually finishes!
@@ -115,13 +121,6 @@ EspResult<void> Display::reset() {
   return final_err;
 }
 
-EspResult<void> Display::draw_bitmap(int x_start, int y_start, int width, int height,
-                                     const void* color_data) {
-  if (!panel_handle_) return ESP_ERR_INVALID_STATE;
-  return esp_lcd_panel_draw_bitmap(panel_handle_, x_start, y_start, x_start + width,
-                                   y_start + height, color_data);
-}
-
 EspResult<void> Display::set_display_state(bool on) {
   if (!panel_handle_) return ESP_ERR_INVALID_STATE;
   return esp_lcd_panel_disp_on_off(panel_handle_, on);
@@ -130,6 +129,11 @@ EspResult<void> Display::set_display_state(bool on) {
 EspResult<void> Display::invert(bool inverted) {
   if (!panel_handle_) return ESP_ERR_INVALID_STATE;
   return esp_lcd_panel_invert_color(panel_handle_, inverted);
+}
+
+EspResult<void> Display::swap_xy(bool swap) {
+  if (!panel_handle_) return ESP_ERR_INVALID_STATE;
+  return esp_lcd_panel_swap_xy(panel_handle_, swap);
 }
 
 EspResult<void> Display::fill_rect(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
@@ -177,6 +181,19 @@ EspResult<void> Display::fill_rect(uint16_t x0, uint16_t y0, uint16_t w, uint16_
 
 EspResult<void> Display::clear() {
   return fill_rect(0, 0, config_.width, config_.height, 0);
+}
+
+EspResult<void> Display::draw_bitmap(int x_start, int y_start, int width, int height,
+                                     const void* color_data, uint32_t /*stride_bytes*/) {
+  if (!panel_handle_) return ESP_ERR_INVALID_STATE;
+
+  // Base class expects color_data to be directly compatible with the esp_lcd driver.
+  // We ignore the stride here because esp_lcd expects contiguous bounding boxes.
+  return esp_lcd_panel_draw_bitmap(panel_handle_, x_start, y_start, x_start + width,
+                                   y_start + height, color_data);
+}
+
+void Display::on_lvgl_init(lv_display_t*) {
 }
 
 }  // namespace HAL

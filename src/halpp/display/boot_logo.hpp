@@ -5,21 +5,24 @@
 
 #pragma once
 
-#include <cstdint>
 #include <array>
+#include <cstdint>
+
+#include "halpp/config.hpp"
+
 
 namespace HAL::Assets {
 
 /**
  * @brief Generates a SSD1306-formatted bitmap of a tech/radar spinner.
- * @details Evaluated entirely at compile time. Maps XY coordinates to the 
+ * @details Evaluated entirely at compile time. Maps XY coordinates to the
  * specific 8-bit page layout required by the SSD1306 hardware.
  * @tparam Width Width of the display in pixels.
  * @tparam Height Height of the display in pixels (must be a multiple of 8).
  */
 template <uint16_t Width = 128, uint16_t Height = 64>
 constexpr std::array<uint8_t, (Width * Height) / 8> generate_boot_logo() {
-  // SSD1306 memory is divided into 8-pixel high pages. 
+  // SSD1306 memory is divided into 8-pixel high pages.
   // If height isn't a multiple of 8, our memory mapping math will overflow.
   static_assert(Height % 8 == 0, "Display height must be a multiple of 8 for SSD1306 paging.");
 
@@ -38,29 +41,29 @@ constexpr std::array<uint8_t, (Width * Height) / 8> generate_boot_logo() {
 
       // 2. Middle "spinning" track (Gap in the top-right quadrant)
       if (r2 >= 18 * 18 && r2 <= 21 * 21) {
-        if (!(dx > 0 && dy < 0)) { // Skip top-right
+        if (!(dx > 0 && dy < 0)) {  // Skip top-right
           draw = true;
         }
       }
-      
+
       // 3. Inner "spinning" track (Gap in the bottom-left quadrant)
       if (r2 >= 10 * 10 && r2 <= 13 * 13) {
-        if (!(dx < 0 && dy > 0)) { // Skip bottom-left
+        if (!(dx < 0 && dy > 0)) {  // Skip bottom-left
           draw = true;
         }
       }
-      
+
       // 4. Solid center core
       if (r2 <= 4 * 4) {
         draw = true;
       }
 
       // If the pixel is part of the logo, map it to the SSD1306 page memory layout
-      if (draw) {
+      if (draw != config::Display::INVERT_COLORS) {
         // SSD1306 splits pixels of height into 8 "pages" of 8 bits each.
         // LSB is top, MSB is bottom for each byte.
         int page = y / 8;
-        int bit  = y % 8;
+        int bit = y % 8;
         // Map to a 1D array using the dynamic Width
         buffer[x + page * Width] |= (1 << bit);
       }

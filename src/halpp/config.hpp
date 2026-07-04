@@ -20,12 +20,19 @@ struct Defaults {
     static constexpr bool ENABLE_PULLUP = true;
     static constexpr uint32_t SCL_WAIT_US = 0;  // 0 = use default
   };
+  struct Display {
+    static constexpr bool INVERT_COLORS = true;   // Invert colors (e.g. for OLEDs - white on black)
+    static constexpr bool SWAP_XY = false;        // Swap X/Y for portrait vs landscape
+    static constexpr bool TRANSPOSE_1BIT = true;  // Transpose displays for LVGL
+  };
   struct Display7Seg {
     static constexpr uint8_t I2C_ADDRESS = 0x70;  // Default I2C address for HT16K33
   };
   struct lvgl {
     static constexpr bool DOUBLE_BUFFERED = true;   // Use two buffers for LVGL rendering
     static constexpr uint32_t BUFFER_FRACTION = 1;  // Buffer size = screen_pixels / buffer_fraction
+    static constexpr uint32_t TASK_STACK_SIZE = 8192;  // LVGL task stack size
+    static constexpr uint32_t TASK_PRIORITY = 5;       // LVGL task priority
   };
 };  // Defaults
 }  // namespace HAL::detail
