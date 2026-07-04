@@ -10,6 +10,9 @@
 
 #include "espbase/esp_result.hpp"
 
+struct _lv_display_t;
+typedef struct _lv_display_t lv_display_t;
+
 namespace HAL {
 
 class Display {
@@ -27,6 +30,10 @@ class Display {
   virtual ~Display() { reset(); }
 
   bool is_initialized() const { return panel_handle_ != nullptr; }
+  
+  EspResult<void> init_lvgl();
+  lv_display_t* get_lv_display() const { return lv_display_; }
+
   uint16_t width() const { return config_.width; }
   uint16_t height() const { return config_.height; }
 
@@ -44,6 +51,7 @@ class Display {
  protected:
   Config config_;
   esp_lcd_panel_handle_t panel_handle_ = nullptr;
+  lv_display_t* lv_display_ = nullptr;
 
   static bool on_color_trans_done(esp_lcd_panel_io_handle_t panel_io,
                                   esp_lcd_panel_io_event_data_t* edata, void* user_ctx);

@@ -23,6 +23,10 @@ struct Defaults {
   struct Display7Seg {
     static constexpr uint8_t I2C_ADDRESS = 0x70;  // Default I2C address for HT16K33
   };
+  struct lvgl {
+    static constexpr bool DOUBLE_BUFFERED = true;   // Use two buffers for LVGL rendering
+    static constexpr uint32_t BUFFER_FRACTION = 1;  // Buffer size = screen_pixels / buffer_fraction
+  };
 };  // Defaults
 }  // namespace HAL::detail
 

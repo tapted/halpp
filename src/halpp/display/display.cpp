@@ -2,15 +2,100 @@
 
 #include <algorithm>
 #include <cstring>
+#include <esp_heap_caps.h>
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
+#include <esp_timer.h>
+#include <lvgl.h>
+
+#include "halpp/config.hpp"
+
+static const char* TAG = "HAL::Display";
+
+using LVGLConfig = HAL::config::lvgl;
 
 namespace HAL {
 
 // static
-bool Display::on_color_trans_done(esp_lcd_panel_io_handle_t panel_io,
-                                  esp_lcd_panel_io_event_data_t* edata, void* user_ctx) {
-  return false;  // No high-priority task woken up by this callback.
+// --- LVGL 9 ISR Callback ---
+IRAM_ATTR bool Display::on_color_trans_done(esp_lcd_panel_io_handle_t panel_io,
+                                            esp_lcd_panel_io_event_data_t* edata, void* user_ctx) {
+  Display* display = static_cast<Display*>(user_ctx);
+  if (display && display->lv_display_) {
+    lv_display_flush_ready(display->lv_display_);
+  }
+  return false;
+}
+
+static uint32_t halpp_lvgl_tick_cb(void) {
+  // Explicitly cast to uint32_t to leverage LVGL's internal math for safe unsigned wrapping.
+  return static_cast<uint32_t>(esp_timer_get_time() / 1000ULL);
+}
+
+// --- LVGL 9 Initialization ---
+EspResult<void> Display::init_lvgl() {
+  if (!is_initialized()) return ESP_ERR_INVALID_STATE;
+  if (lv_display_) return ESP_OK;  // Already initialized
+
+  // Defensively ensure the LVGL core is initialized.
+  if (!lv_is_initialized()) lv_init();
+  lv_tick_set_cb(halpp_lvgl_tick_cb);
+
+  // 1. Calculate Buffer Size dynamically via halpp_board.hpp overrides
+  const uint32_t pixels_per_screen = config_.width * config_.height;
+  const uint32_t buffer_pixels = pixels_per_screen / LVGLConfig::BUFFER_FRACTION;
+  const size_t buffer_bytes = (buffer_pixels * config_.bits_per_pixel + 7) / 8;
+
+  // 2. Allocate DMA-capable memory
+  void* buf1 = heap_caps_malloc(buffer_bytes, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+  void* buf2 = nullptr;
+
+  if (LVGLConfig::DOUBLE_BUFFERED) {
+    buf2 = heap_caps_malloc(buffer_bytes, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+  }
+
+  if (!buf1 || (LVGLConfig::DOUBLE_BUFFERED && !buf2)) {
+    ESP_LOGE(TAG, "Failed to allocate LVGL DMA buffers!");
+    return ESP_ERR_NO_MEM;
+  }
+
+  // 3. Create LVGL 9 Display Object
+  lv_display_ = lv_display_create(config_.width, config_.height);
+  if (!lv_display_) return ESP_ERR_NO_MEM;
+
+  // Link our C++ class instance to the LVGL object
+  lv_display_set_user_data(lv_display_, this);
+
+  // 4. Dynamically set color format based on our hardware config
+  if (config_.bits_per_pixel == 1) {
+    // Perfect for SSD1306! Tells LVGL to pack pixels into 1-bit boundaries.
+    lv_display_set_color_format(lv_display_, LV_COLOR_FORMAT_I1);
+  } else if (config_.bits_per_pixel == 16) {
+    lv_display_set_color_format(lv_display_, LV_COLOR_FORMAT_RGB565);
+  } else {
+    ESP_LOGW(TAG, "Unsupported BPP for LVGL auto-config");
+  }
+
+  // 5. Assign buffers (LVGL 9 expects size in BYTES, not pixels!)
+  lv_display_set_buffers(lv_display_, buf1, buf2, buffer_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
+
+  // 6. Set up the flush callback using the new v9 signature
+  lv_display_set_flush_cb(
+      lv_display_, [](lv_display_t* disp, const lv_area_t* area, uint8_t* px_map) {
+        Display* display = static_cast<Display*>(lv_display_get_user_data(disp));
+
+        const int w = area->x2 - area->x1 + 1;
+        const int h = area->y2 - area->y1 + 1;
+
+        // px_map is now a raw byte pointer in v9, perfectly matching our draw_bitmap signature
+        display->draw_bitmap(area->x1, area->y1, w, h, px_map);
+
+        // We do NOT call lv_display_flush_ready here, because the DMA engine
+        // will trigger on_color_trans_done() when the hardware actually finishes!
+      });
+
+  ESP_LOGI(TAG, "LVGL 9 Display initialized (Buffer: %zu bytes)", buffer_bytes);
+  return ESP_OK;
 }
 
 EspResult<void> Display::reset() {
