@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "espbase/esp_result.hpp"
+#include "halpp/config.hpp"
 #include "halpp/i2c/i2c_device.hpp"
 
 struct tm;
@@ -30,7 +31,7 @@ class I2C7Seg {
   }
 
   // Initializes the default instance and attaches it to the bus
-  static EspResult<void> init_default(uint8_t i2c_address = 0x70);
+  static EspResult<void> init_default(uint8_t i2c_address = HAL::config::Display7Seg::I2C_ADDRESS);
 
   // Releases the device handle for the default instance
   static EspResult<void> deinit_default();
@@ -54,7 +55,8 @@ class I2C7Seg {
   void print_number(int n);
   void print_float(double n, uint8_t frac_digits = 2);
 
-  // Shows the time using gettimeofday. Returns the number of milliseconds until the next second boundary.
+  // Shows the time using gettimeofday. Returns the number of milliseconds until the next second
+  // boundary.
   uint32_t show_time(tm* timeinfo_out = nullptr);
 
  private:

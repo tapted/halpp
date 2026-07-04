@@ -3,9 +3,9 @@
 #include <driver/i2c_master.h>
 #include <esp_log.h>
 
-#include "hal/board.hpp"
+#include "halpp/config.hpp"
 
-namespace I2CConfig = HAL::I2CConfig;
+using I2CConfig = HAL::config::I2CConfig;
 
 namespace {
 static constexpr char TAG[] = "I2C_Master";
