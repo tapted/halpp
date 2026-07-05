@@ -21,6 +21,8 @@ class Display {
   struct DisplayLock;
 
  public:
+  virtual ~Display() { reset(); }
+
   // RAII-style lock for thread-safe LVGL access. Locks the internal mutex on construction. Unlocks
   // and notifies the LVGL task to redraw on destruction.
   struct Guard {
@@ -34,10 +36,6 @@ class Display {
     esp_lcd_panel_io_handle_t io_handle = nullptr;
     bool owns_io_handle = false;
   };
-
-  Display() = default;
-  explicit Display(Config config) : config_(config) {}
-  virtual ~Display() { reset(); }
 
   bool is_initialized() const { return panel_handle_ != nullptr; }
 
@@ -70,6 +68,9 @@ class Display {
   virtual void on_lvgl_init(lv_display_t* disp);
 
  protected:
+  constexpr Display() = default;
+  explicit Display(Config config) : config_(config) {}
+
   Config config_;
   esp_lcd_panel_handle_t panel_handle_ = nullptr;
   lv_display_t* lv_display_ = nullptr;

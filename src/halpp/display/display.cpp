@@ -19,7 +19,7 @@ using LVGLConfig = HAL::config::lvgl;
 // LVGL is global, so no point putting these on the Display instance. They are shared across all
 // displays.
 static std::mutex lvgl_mutex;
-static YieldingTask<int> lvgl_task;
+static constinit YieldingTask<int> lvgl_task;
 
 static std::optional<uint32_t> lvgl_step_function(YieldingTask<int>&) {
   std::lock_guard<std::mutex> lock(lvgl_mutex);
@@ -30,7 +30,7 @@ static std::optional<uint32_t> lvgl_step_function(YieldingTask<int>&) {
 
 namespace HAL {
 
-Display::DisplayLock Display::mutex;
+constinit Display::DisplayLock Display::mutex;
 
 void Display::DisplayLock::lock() {
   lvgl_mutex.lock();
