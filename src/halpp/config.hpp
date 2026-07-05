@@ -33,6 +33,7 @@ struct Defaults {
     static constexpr uint32_t BUFFER_FRACTION = 1;  // Buffer size = screen_pixels / buffer_fraction
     static constexpr uint32_t TASK_STACK_SIZE = 8192;  // LVGL task stack size
     static constexpr uint32_t TASK_PRIORITY = 5;       // LVGL task priority
+    static constexpr uint8_t TASK_CORE_ID = 1;         // LVGL task core affinity
   };
 };  // Defaults
 }  // namespace HAL::detail

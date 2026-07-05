@@ -59,19 +59,15 @@ EspResult<void> Ssd1306::init_default_i2c(uint8_t i2c_address, uint16_t width, u
 EspResult<void> Ssd1306::begin() {
   if (!config_.io_handle) return ESP_ERR_INVALID_STATE;
   if (is_initialized()) return ESP_OK;
-  esp_lcd_panel_ssd1306_config_t ssd1306_config = {.height = 64};
   switch (config_.height) {
     case 32:
-      ssd1306_config.height = 32;
-      break;
     case 64:
-      ssd1306_config.height = 64;  // Default, but explicit for clarity.
       break;
     default:
       ESP_LOGE(TAG, "Unsupported SSD1306 height: %d. Only 32 or 64 are supported.", config_.height);
       return ESP_ERR_INVALID_ARG;
   }
-
+  esp_lcd_panel_ssd1306_config_t ssd1306_config = {.height = static_cast<uint8_t>(config_.height)};
   esp_lcd_panel_dev_config_t panel_config = {
       .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,  // Ignored by monochrome SSD1306
       .data_endian = LCD_RGB_DATA_ENDIAN_BIG,      // Ignored by monochrome SSD1306

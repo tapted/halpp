@@ -7,14 +7,39 @@
 #include <esp_lcd_panel_ops.h>
 #include <esp_timer.h>
 #include <lvgl.h>
+#include <mutex>
 
+#include "espbase/yielding_task.hpp"
 #include "halpp/config.hpp"
 
 static const char* TAG = "HAL::Display";
 
 using LVGLConfig = HAL::config::lvgl;
 
+// LVGL is global, so no point putting these on the Display instance. They are shared across all
+// displays.
+static std::mutex lvgl_mutex;
+static YieldingTask<int> lvgl_task;
+
+static std::optional<uint32_t> lvgl_step_function(YieldingTask<int>&) {
+  std::lock_guard<std::mutex> lock(lvgl_mutex);
+  uint32_t delay_ms = lv_timer_handler();
+  if (delay_ms == LV_NO_TIMER_READY) return std::nullopt;
+  return delay_ms;
+}
+
 namespace HAL {
+
+Display::DisplayLock Display::mutex;
+
+void Display::DisplayLock::lock() {
+  lvgl_mutex.lock();
+}
+
+void Display::DisplayLock::unlock() {
+  lvgl_mutex.unlock();
+  lvgl_task.notify();  // Notify the LVGL task to run immediately after unlocking
+}
 
 // static
 // --- LVGL 9 ISR Callback ---
@@ -111,7 +136,7 @@ EspResult<void> Display::init_lvgl() {
           default:
             break;
         }
-        
+
         if (palette_bytes > 0) {
           const uint8_t* palette = px_map;
           const uint8_t* pixels = px_map + palette_bytes;  // Cleanly advance past the header
@@ -125,6 +150,14 @@ EspResult<void> Display::init_lvgl() {
       });
 
   ESP_LOGI(TAG, "LVGL 9 Display initialized (Buffer: %zu bytes)", buffer_bytes);
+
+  lvgl_task.start(
+      {
+          .stack_size = HAL::config::lvgl::TASK_STACK_SIZE,
+          .priority = HAL::config::lvgl::TASK_PRIORITY,
+          .core_id = HAL::config::lvgl::TASK_CORE_ID,
+      },
+      0, lvgl_step_function);
   return ESP_OK;
 }
 

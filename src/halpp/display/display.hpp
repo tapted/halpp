@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <esp_lcd_types.h>
+#include <mutex>
 
 #include "espbase/esp_result.hpp"
 
@@ -16,7 +17,16 @@ typedef struct _lv_display_t lv_display_t;
 namespace HAL {
 
 class Display {
+ private:
+  struct DisplayLock;
+
  public:
+  // RAII-style lock for thread-safe LVGL access. Locks the internal mutex on construction. Unlocks
+  // and notifies the LVGL task to redraw on destruction.
+  struct Guard {
+    std::lock_guard<DisplayLock> lock{mutex};
+  };
+
   struct Config {
     uint16_t width = 0;
     uint16_t height = 0;
@@ -50,7 +60,7 @@ class Display {
   // Virtualized so subclasses can intercept and transpose raw data (like SSD1306)
   virtual EspResult<void> draw_bitmap(int x_start, int y_start, int width, int height,
                                       const void* color_data, uint32_t stride_bytes = 0);
-                                      
+
   // New hook for LVGL indexed formats (cleanly separates the ARGB8888 palette from the pixels)
   virtual EspResult<void> draw_indexed_bitmap(int x_start, int y_start, int width, int height,
                                               const void* pixel_data, const void* palette,
@@ -68,6 +78,16 @@ class Display {
                                   esp_lcd_panel_io_event_data_t* edata, void* user_ctx);
 
  private:
+  // Locks an internal mutex and notifies LVGL to redraw on unlock.
+  struct DisplayLock {
+   private:
+    friend class std::lock_guard<DisplayLock>;
+    void lock();
+    void unlock();
+  };
+
+  static DisplayLock mutex;
+
   // Non-copyable, non-movable, so we can pass `this` as user_ctx.
   Display(const Display&) = delete;
   Display& operator=(const Display&) = delete;
