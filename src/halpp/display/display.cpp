@@ -137,12 +137,19 @@ EspResult<void> Display::init_lvgl() {
             break;
         }
 
+        EspResult<void> res;
         if (palette_bytes > 0) {
           const uint8_t* palette = px_map;
           const uint8_t* pixels = px_map + palette_bytes;  // Cleanly advance past the header
-          display->draw_indexed_bitmap(area->x1, area->y1, w, h, pixels, palette, lv_stride);
+          res = display->draw_indexed_bitmap(area->x1, area->y1, w, h, pixels, palette, lv_stride);
         } else {
-          display->draw_bitmap(area->x1, area->y1, w, h, px_map, lv_stride);
+          res = display->draw_bitmap(area->x1, area->y1, w, h, px_map, lv_stride);
+        }
+        if (!res) {
+          ESP_LOGE(TAG, "Failed to draw LVGL area (%d,%d)-(%d,%d): %s", area->x1, area->y1,
+                   area->x2, area->y2, esp_err_to_name(res.error()));
+          // Say we're ready to avoid deadlocking LVGL, even though the display is in a bad state.
+          lv_display_flush_ready(display->lv_display_);
         }
 
         // We do NOT call lv_display_flush_ready here, because the DMA engine
