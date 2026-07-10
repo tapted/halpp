@@ -181,24 +181,7 @@ uint32_t I2C7Seg::show_time(tm* timeinfo_out) {
   // Calculate exactly how many milliseconds we are into the current minute
   // tm_sec is 0-59. tv_usec is 0-999999.
   uint32_t ms_passed_in_minute = (timeinfo.tm_sec * 1000) + (tv.tv_usec / 1000);
-
-  uint32_t delay_ms;
-
-  // Calculate delay to the next target offset
-  if (ms_passed_in_minute < TARGET_OFFSET_MS) {
-    // We woke up fractions of a millisecond early (e.g. at 00:00.010).
-    // Wait the remaining 40ms to clear the safety margin.
-    delay_ms = TARGET_OFFSET_MS - ms_passed_in_minute;
-  } else {
-    // We are safely past the offset. Wait until the NEXT minute's offset.
-    // A full minute is 60,000 milliseconds.
-    delay_ms = 60000 - ms_passed_in_minute + TARGET_OFFSET_MS;
-  }
-
-  // Fallback safeguard: prevent 0ms spins
-  if (delay_ms == 0) delay_ms = 60000;
-
-  return delay_ms;
+  return 60000 - ms_passed_in_minute + TARGET_OFFSET_MS;
 }
 
 }  // namespace HAL
