@@ -9,7 +9,7 @@
  * HAL::melodies::korobeiniki
  * HAL::melodies::korobeiniki_riff
  * HAL::melodies::ambient_sequence
- * HAL::melodies::factory_drone 
+ * HAL::melodies::factory_drone
  */
 
 #pragma once
@@ -240,7 +240,7 @@ constexpr std::array<Note, 40> korobeiniki = {{
 
 constexpr uint8_t V_K = 100;  // Standard volume
 
-constexpr std::array<Note, 42> korobeiniki_riff = {{
+constexpr std::array<Note, 41> korobeiniki_riff = {{
     // Measure 1
     {N_E5, 270, V_K},
     {REST, 30, 0},
@@ -352,6 +352,96 @@ constexpr std::array<Note, 8> factory_drone = {{
     {65, 500, 50},  // Spin down
     {65, 500, 13},
     {0, 1500, 0}  // Long silence before the loop repeats
+}};
+
+// Extended Sea Shanty (Wellerman Full Chorus)
+// Tempo: ~100 BPM.
+// Note: Volume is now mapped to uint8_t (0-255) per the optimized struct.
+constexpr uint8_t V_NORM = 100;  // ~40% duty cycle
+constexpr uint8_t V_ACC = 255;   // 100% duty cycle for heavy accents
+constexpr uint8_t V_OFF = 0;
+
+constexpr std::array<Note, 68> shanty_riff_extended = {{
+    // "Soon may the We-ller-man come"
+    {N_E4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_A4, 250, V_ACC},
+    {REST, 50, V_OFF},
+    {N_A4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_A4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_A4, 250, V_ACC},
+    {REST, 50, V_OFF},
+    {N_B4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_C5, 300, V_ACC},
+    {REST, 100, V_OFF},
+    {N_A4, 250, V_NORM},
+    {REST, 100, V_OFF},
+
+    // "To bring us su-gar and tea and rum"
+    {N_E4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_G4, 250, V_ACC},
+    {REST, 50, V_OFF},
+    {N_G4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_G4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_A4, 250, V_ACC},
+    {REST, 50, V_OFF},
+    {N_B4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_C5, 200, V_NORM},
+    {REST, 50, V_OFF},
+    {N_C5, 200, V_NORM},
+    {REST, 50, V_OFF},
+    {N_A4, 500, V_ACC},
+    {REST, 200, V_OFF},
+
+    // "One day, when the ton-guin' is done"
+    {N_E4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_A4, 250, V_ACC},
+    {REST, 50, V_OFF},
+    {N_A4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_A4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_A4, 250, V_ACC},
+    {REST, 50, V_OFF},
+    {N_B4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_C5, 300, V_ACC},
+    {REST, 100, V_OFF},
+    {N_A4, 250, V_NORM},
+    {REST, 100, V_OFF},
+
+    // "We'll take our leave and go"
+    {N_E4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_G4, 250, V_ACC},
+    {REST, 50, V_OFF},
+    {N_G4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_G4, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_B4, 250, V_ACC},
+    {REST, 50, V_OFF},
+    {N_C5, 150, V_NORM},
+    {REST, 50, V_OFF},
+    {N_B4, 150, V_NORM},
+    {REST, 50, V_OFF},
+
+    // Rapid trill flourish (Adds complexity, stresses FreeRTOS task scheduling)
+    {N_A4, 60, V_ACC},
+    {N_B4, 60, V_ACC},
+    {N_C5, 60, V_ACC},
+    {N_B4, 60, V_ACC},
+
+    // Final sustained root note - sounds bad
+    // { N_A4, 600, V_ACC }, { REST, 200, V_OFF }
 }};
 
 }  // namespace HAL::melodies
