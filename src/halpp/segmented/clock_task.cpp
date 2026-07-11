@@ -30,6 +30,7 @@ static std::optional<uint32_t> clock_update_step(YieldingTask<ClockTask::TaskDat
 void ClockTask::on_time_synced() {
   // Empricially, we need 108 bytes right now. 512 is plenty if there's no logging.
   // Problem: interrupts can randomly take over the task and cause a stack overflow. Humph.
-  constexpr TaskConfig config = {.name = "clock_task", .stack_size = 2048, .priority = 3};
+  constexpr TaskConfig config = {
+      .name = "clock_task", .stack_size = 2048, .priority = 3, .use_hardware_wakeups = true};
   task_.start(config, &alarms_, clock_update_step);
 }
