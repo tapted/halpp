@@ -71,11 +71,12 @@ void Passive::play(Melody melody) {
   task_.notify(true);  // Wake the task up and clear any existing stop requests
 }
 
-void Passive::beep(uint32_t frequency_hz, uint32_t duration_ms, float volume) {
+void Passive::beep(uint16_t frequency_hz, uint16_t duration_ms, float volume) {
   if (!is_initialized()) return;
 
+  uint8_t volume_255 = static_cast<uint8_t>(std::clamp(volume, 0.0f, 1.0f) * 255);
   // 1. Write the dynamic values into our stable, instance-owned memory
-  beep_scratchpad_[0] = Note{frequency_hz, duration_ms, volume};
+  beep_scratchpad_[0] = Note{frequency_hz, duration_ms, volume_255};
 
   // 2. Play it. The span safely points to the scratchpad.
   play(beep_scratchpad_);
@@ -93,7 +94,7 @@ std::optional<uint32_t> Passive::playback_step(YieldingTask<PlaybackState>& task
   }
 
   const Note& note = state->melody[state->current_index];
-  state->buzzer->set_hardware_note(note.frequency_hz, note.volume);
+  state->buzzer->set_hardware_note(note.frequency_hz, 1.0f * note.volume_255 / 255);
   state->current_index++;
   return note.duration_ms;
 }

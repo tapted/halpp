@@ -22,9 +22,9 @@
 namespace HAL {
 
 struct Note {
-  uint32_t frequency_hz = 4000;
-  uint32_t duration_ms = 500;
-  float volume = 0.1f;  // Range: 0.0f ~ 1.0f
+  uint16_t frequency_hz = 4000;
+  uint16_t duration_ms = 500;
+  uint8_t volume_255 = 25;  // Range: 0 ~ 255
 };
 
 // A non-owning view of a sequence of notes.
@@ -72,7 +72,7 @@ class Passive {
   // Plays a melody asynchronously. The backing array must remain valid in memory.
   void play(Melody melody);
   // Plays a single, dynamically defined note.
-  void beep(uint32_t frequency_hz, uint32_t duration_ms, float volume = 0.1f);
+  void beep(uint16_t frequency_hz, uint16_t duration_ms, float volume = 0.1f);
   void stop();
 
  private:
