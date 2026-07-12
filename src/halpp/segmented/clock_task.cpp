@@ -12,15 +12,16 @@ static std::optional<uint32_t> clock_update_step(YieldingTask<ClockTask::TaskDat
   for (size_t i = 0; i < alarms->alarms_hhmmss.size(); ++i) {
     if (!alarms->on_alarm) continue;
 
-    uint32_t alarm_hhmmss = alarms->alarms_hhmmss[i];
-    uint8_t enabled = (alarm_hhmmss >> 24) & 0x01;
-    if (!enabled) continue;
+    ClockTask::HhMmSs& t = alarms->alarms_hhmmss[i];
+    if (t.state == ClockTask::State::Idle) continue;
 
-    uint8_t hour = (alarm_hhmmss >> 16) & 0xFF;
-    uint8_t minute = (alarm_hhmmss >> 8) & 0xFF;
-    uint8_t second = alarm_hhmmss & 0xFF;
-    if (timeinfo.tm_hour == hour && timeinfo.tm_min == minute && timeinfo.tm_sec == second) {
-      alarms->on_alarm(i);
+    if (timeinfo.tm_hour == t.hour && timeinfo.tm_min == t.minute && timeinfo.tm_sec == t.second) {
+      if (t.state == ClockTask::State::Active) {
+        t.state = ClockTask::State::Triggered;
+        alarms->on_alarm(i);
+      }
+    } else {
+      t.state = ClockTask::State::Active;
     }
   }
 
