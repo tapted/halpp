@@ -26,12 +26,6 @@ class WifiSta {
   constexpr WifiSta() = default;
   ~WifiSta() { reset(); }
 
-  // Pinned in memory to guarantee the OS event loop never has a dangling 'this' pointer
-  WifiSta(const WifiSta&) = delete;
-  WifiSta& operator=(const WifiSta&) = delete;
-  WifiSta(WifiSta&&) = delete;
-  WifiSta& operator=(WifiSta&&) = delete;
-
   EspResult<void> start(const WifiConfig& config);
   void reset();
 
@@ -39,6 +33,11 @@ class WifiSta {
   EspResult<void> reconnect();  // Manual trigger if auto_reconnect is false
 
  private:
+  WifiSta(const WifiSta&) = delete;
+  WifiSta& operator=(const WifiSta&) = delete;
+  WifiSta(WifiSta&&) = delete;
+  WifiSta& operator=(WifiSta&&) = delete;
+
   esp_netif_t* netif_sta_ = nullptr;
   esp_event_handler_instance_t wifi_handler_ = nullptr;
   esp_event_handler_instance_t ip_handler_ = nullptr;

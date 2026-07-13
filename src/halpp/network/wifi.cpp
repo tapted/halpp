@@ -19,9 +19,14 @@ EspResult<void> WifiSta::start(const WifiConfig& config) {
   // 2. Init the Driver
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   if (esp_err_t err = esp_wifi_init(&cfg)) {
-    esp_netif_destroy(netif_sta_);
-    netif_sta_ = nullptr;
-    return err;
+    if (err == ESP_ERR_INVALID_STATE) {
+      ESP_LOGW(TAG, "esp_wifi_init() gave ESP_ERR_INVALID_STATE. Stopping wifi. Assuming inited.");
+      esp_wifi_stop();  // Stop to ensure the netif sees the connection events.
+    } else {
+      esp_netif_destroy(netif_sta_);
+      netif_sta_ = nullptr;
+      return err;
+    }
   }
 
   // 3. Register Event Handlers, passing 'this' as the argument
