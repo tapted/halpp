@@ -217,7 +217,7 @@ void WifiSta::event_trampoline(void* arg, esp_event_base_t event_base, int32_t e
         store->set_string(PASS_KEY, password.c_str()).log_error(TAG, "set_pass");
         store->commit().log_error(TAG, "commit ssid/pass");
       } else {
-        store.log_error(TAG, "Failed to open NVS store for saving Wi-Fi credentials");
+        store.strip().log_error(TAG, "Failed to open NVS store for saving Wi-Fi credentials");
       }
       // Provisioning is complete. Cleanly kill the DPP stack.
       esp_supp_dpp_stop_listen();
