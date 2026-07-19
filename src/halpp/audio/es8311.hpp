@@ -9,7 +9,7 @@ enum class Es8311Resolution { Res16 = 16, Res18 = 18, Res20 = 20, Res24 = 24, Re
 
 enum class Es8311Fade {
   Off = 0,
-  Fade4LRCK,
+  Fade4LRCK,  // 4LRCK means ramp 0.25dB/4LRCK
   Fade8LRCK,
   Fade16LRCK,
   Fade32LRCK,
@@ -29,12 +29,14 @@ enum class Es8311Fade {
 struct Es8311Config {
   bool mclk_inverted = false;
   bool sclk_inverted = false;
+  // true: from MCLK pin (pin no. 2), false: from SCLK pin (pin no. 6)
   bool mclk_from_mclk_pin = true;
-  uint32_t mclk_frequency = 44100 * 256;
-  uint32_t sample_frequency = 44100;
+  uint32_t mclk_frequency = 44100 * 256;  //  ignored if MCLK is taken from SCLK pin
+  uint32_t sample_frequency = 44100;      // Hz
 
   Es8311Resolution resolution = Es8311Resolution::Res16;
 };
+
 class Es8311 {
  public:
   constexpr Es8311() = default;

@@ -28,7 +28,10 @@ class I2CDevice {
 
   EspResult<void> reset();
 
+  // Calls i2c_master_transmit(), or returns ESP_ERR_INVALID_STATE if !handle_;
   EspResult<void> transmit(const uint8_t* data, size_t length, int timeout_ms = 1000);
+
+  // Calls i2c_master_transmit_receive(), or returns ESP_ERR_INVALID_STATE if !handle_;
   EspResult<void> transmit_receive(const uint8_t* tx_data, size_t tx_length, uint8_t* rx_data,
                                    size_t rx_length, int timeout_ms = 1000);
 
