@@ -44,18 +44,18 @@ EspResult<LedStrip> LedStrip::create_rmt(const RmtConfig& config) {
   return EspResult<LedStrip>::ok(LedStrip(handle));
 }
 
-EspResult<void> LedStrip::init_default(const RmtConfig& config) {
+EspResult<> LedStrip::init_default(const RmtConfig& config) {
   std::optional<LedStrip>& opt = default_optional();
   if (opt) return ESP_ERR_INVALID_STATE;  // Already initialized
   EspResult<LedStrip> result = HAL::LedStrip::create_rmt(config);
   if (!result) {
-    return result.log_error("LedStrip", "Failed to init_default");
+    return result.strip().log_error("LedStrip", "Failed to init_default");
   }
   opt = std::move(*result);
   return ESP_OK;
 }
 
-EspResult<void> LedStrip::reset() {
+EspResult<> LedStrip::reset() {
   if (handle_) {
     // Optionally clear before deleting so they don't stay lit
     led_strip_clear(handle_);
@@ -66,34 +66,34 @@ EspResult<void> LedStrip::reset() {
   return ESP_OK;
 }
 
-EspResult<void> LedStrip::set_pixel(uint32_t index, uint32_t r, uint32_t g, uint32_t b) {
+EspResult<> LedStrip::set_pixel(uint32_t index, uint32_t r, uint32_t g, uint32_t b) {
   if (!handle_) return ESP_ERR_INVALID_STATE;
   return led_strip_set_pixel(handle_, index, r, g, b);
 }
 
-EspResult<void> LedStrip::set_pixel_rgbw(uint32_t index, uint32_t r, uint32_t g, uint32_t b,
+EspResult<> LedStrip::set_pixel_rgbw(uint32_t index, uint32_t r, uint32_t g, uint32_t b,
                                          uint32_t w) {
   if (!handle_) return ESP_ERR_INVALID_STATE;
   return led_strip_set_pixel_rgbw(handle_, index, r, g, b, w);
 }
 
-EspResult<void> LedStrip::set_pixel_hsv(uint32_t index, uint16_t hue, uint8_t sat, uint8_t val) {
+EspResult<> LedStrip::set_pixel_hsv(uint32_t index, uint16_t hue, uint8_t sat, uint8_t val) {
   if (!handle_) return ESP_ERR_INVALID_STATE;
   return led_strip_set_pixel_hsv(handle_, index, hue, sat, val);
 }
 
-EspResult<void> LedStrip::set_pixel_hsv_16(uint32_t index, uint16_t hue, uint16_t sat,
+EspResult<> LedStrip::set_pixel_hsv_16(uint32_t index, uint16_t hue, uint16_t sat,
                                            uint16_t val) {
   if (!handle_) return ESP_ERR_INVALID_STATE;
   return led_strip_set_pixel_hsv_16(handle_, index, hue, sat, val);
 }
 
-EspResult<void> LedStrip::refresh() {
+EspResult<> LedStrip::refresh() {
   if (!handle_) return ESP_ERR_INVALID_STATE;
   return led_strip_refresh(handle_);
 }
 
-EspResult<void> LedStrip::clear() {
+EspResult<> LedStrip::clear() {
   if (!handle_) return ESP_ERR_INVALID_STATE;
   return led_strip_clear(handle_);
 }

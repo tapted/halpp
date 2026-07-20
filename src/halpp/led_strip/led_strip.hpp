@@ -31,7 +31,7 @@ class LedStrip {
 
   static EspResult<LedStrip> create_rmt(const RmtConfig& config);
   static LedStrip& default_instance() { return *default_optional(); }
-  static EspResult<void> init_default(const RmtConfig& config);
+  static EspResult<> init_default(const RmtConfig& config);
   static void deinit_default() { default_optional().reset(); }
 
   // Can be moved. Not copied.
@@ -43,16 +43,16 @@ class LedStrip {
   explicit operator bool() const { return handle_ != nullptr; }
   bool operator!() const { return handle_ == nullptr; }
 
-  EspResult<void> reset();
+  EspResult<> reset();
 
   // --- Pixel Operations ---
-  EspResult<void> set_pixel(uint32_t index, uint32_t r, uint32_t g, uint32_t b);
-  EspResult<void> set_pixel_rgbw(uint32_t index, uint32_t r, uint32_t g, uint32_t b, uint32_t w);
-  EspResult<void> set_pixel_hsv(uint32_t index, uint16_t hue, uint8_t sat, uint8_t val);
-  EspResult<void> set_pixel_hsv_16(uint32_t index, uint16_t hue, uint16_t sat, uint16_t val);
+  EspResult<> set_pixel(uint32_t index, uint32_t r, uint32_t g, uint32_t b);
+  EspResult<> set_pixel_rgbw(uint32_t index, uint32_t r, uint32_t g, uint32_t b, uint32_t w);
+  EspResult<> set_pixel_hsv(uint32_t index, uint16_t hue, uint8_t sat, uint8_t val);
+  EspResult<> set_pixel_hsv_16(uint32_t index, uint16_t hue, uint16_t sat, uint16_t val);
 
-  EspResult<void> refresh();
-  EspResult<void> clear();
+  EspResult<> refresh();
+  EspResult<> clear();
 
  private:
   led_strip_handle_t handle_ = nullptr;
