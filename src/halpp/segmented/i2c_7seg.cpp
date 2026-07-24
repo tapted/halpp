@@ -170,11 +170,16 @@ uint32_t I2C7Seg::show_time(tm* timeinfo_out) {
     *timeinfo_out = timeinfo;
   }
 
-  print_number(timeinfo.tm_hour * 100 + timeinfo.tm_min);
+  char buf[8];
+  snprintf(buf, sizeof(buf), "%02d%02d", timeinfo.tm_hour, timeinfo.tm_min);
+  print(buf);
+
   write_display().log_error(TAG, "Failed to update time display");
 
-  ESP_LOGI(TAG, "Current time: %02d:%02d:%02d.%03ld", timeinfo.tm_hour, timeinfo.tm_min,
-           timeinfo.tm_sec, tv.tv_usec / 1000);
+  if (timeinfo.tm_min == 0) {
+    ESP_LOGI(TAG, "Current time: %02d:%02d:%02d.%03ld", timeinfo.tm_hour, timeinfo.tm_min,
+             timeinfo.tm_sec, tv.tv_usec / 1000);
+  }
 
   // Safety Margin (Target 50ms past the second)
   constexpr uint32_t TARGET_OFFSET_MS = 50;
