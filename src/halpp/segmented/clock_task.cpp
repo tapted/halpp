@@ -4,7 +4,7 @@
 
 #include "halpp/segmented/i2c_7seg.hpp"
 
-static std::optional<uint32_t> clock_update_step(YieldingTask<ClockTask::TaskData>& task) {
+static std::optional<uint32_t> clock_update_step(MainLoopTask<ClockTask::TaskData>& task) {
   tm timeinfo;
   uint32_t delay_ms = HAL::I2C7Seg::default_instance().show_time(&timeinfo);
 
@@ -29,9 +29,6 @@ static std::optional<uint32_t> clock_update_step(YieldingTask<ClockTask::TaskDat
 }
 
 void ClockTask::on_time_synced() {
-  // Empricially, we need 108 bytes right now. 512 is plenty if there's no logging.
-  // Problem: interrupts can randomly take over the task and cause a stack overflow. Humph.
-  constexpr TaskConfig config = {
-      .name = "clock_task", .stack_size = 2048, .priority = 3, .use_hardware_wakeups = true};
-  task_.start(config, &alarms_, clock_update_step);
+  // Ignore return (means task is already running).
+  task_.start({.name = "clock_task"}, &alarms_, clock_update_step);
 }

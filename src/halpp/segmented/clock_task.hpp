@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include "espbase/yielding_task.hpp"
+#include "espbase/main_loop_task.hpp"
 
 class ClockTask {
  public:
@@ -24,8 +24,6 @@ class ClockTask {
   constexpr ClockTask(OnAlarm on_alarm = nullptr) { alarms_.on_alarm = on_alarm; }
   void on_time_synced();
 
-  YieldingTask<TaskData> task_;
-
   void set_alarm(size_t index, uint8_t hour, uint8_t minute, uint8_t second) {
     if (index >= MAX_ALARMS) return;
     alarms_.alarms_hhmmss[index] = HhMmSs{State::Active, hour, minute, second};
@@ -33,4 +31,5 @@ class ClockTask {
 
  private:
   TaskData alarms_;
+  MainLoopTask<TaskData> task_;
 };
