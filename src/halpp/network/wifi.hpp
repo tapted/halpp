@@ -17,6 +17,7 @@ struct WifiConfig {
   bool ignore_stored_credentials = false;  // If true, will not use any previously stored credentials
 
   // Decoupled Event Callbacks
+  void (*on_ready)(EspResult<std::string> qrcode, void* ctx) = nullptr;
   void (*on_got_ip)(const esp_netif_ip_info_t& ip_info, void* ctx) = nullptr;
   void (*on_disconnected)(void* ctx) = nullptr;
   void* ctx = nullptr;  // Opaque pointer to the owning class
@@ -28,8 +29,12 @@ class WifiSta {
   constexpr WifiSta() = default;
   ~WifiSta() { reset(); }
 
-  // Returns a provisioning QR code if ssid/password are null and no creds were stored.
-  EspResult<std::string> start(const WifiConfig& config);
+  // Spawns a task on core 0 to initialize the Wi-Fi stack and connect to the network. The on_ready
+  // callback is invoked when the network is ready (or if an error occurs).
+  // ESP_OK with empty string indicates success (no provisioning needed).
+  // ESP_OK with a string indicates provisioning is needed, and the string is a QR code to display.
+  // Otherwise an error.
+  void start(const WifiConfig& config);
   void reset();
 
   EspResult<void> disconnect();
@@ -50,6 +55,8 @@ class WifiSta {
   WifiConfig config_;
   bool initialized_ = false;
   bool provisioning_ = false;
+
+  EspResult<std::string> perform_background_init();
 
   // Static trampoline to route C-events back to the C++ object instance
   static void event_trampoline(void* arg, esp_event_base_t event_base, int32_t event_id,

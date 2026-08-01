@@ -54,15 +54,38 @@ EspResult<std::string> start_dpp_provisioning(const std::string& listen_channel)
 }
 }  // namespace
 
-EspResult<std::string> WifiSta::start(const WifiConfig& config) {
-  if (initialized_) return ESP_ERR_INVALID_STATE;
+void WifiSta::start(const WifiConfig& config) {
+  if (initialized_) {
+    if (config.on_ready) config.on_ready(ESP_ERR_INVALID_STATE, config.ctx);
+    return;
+  }
   config_ = config;
 
+  ESP_LOGI(TAG, "Spawning background WiFi initialization on Core 0 from Core %d", xPortGetCoreID());
+
+  // Spawn the blocking radio setup on Core 0
+  BaseType_t res = xTaskCreatePinnedToCore(
+      [](void* arg) -> void {
+        WifiSta* self = static_cast<WifiSta*>(arg);
+        EspResult<std::string> final_result = self->perform_background_init();
+        if (self->config_.on_ready) {
+          self->config_.on_ready(final_result, self->config_.ctx);
+        }
+        vTaskDelete(nullptr);
+      },
+      "wifi_boot", 4096, this, 5, nullptr, 0 /* PRO_CPU */);
+
+  if (res != pdPASS) {
+    if (config_.on_ready) config_.on_ready(ESP_ERR_NO_MEM, config_.ctx);
+  }
+}
+
+EspResult<std::string> WifiSta::perform_background_init() {
   // 1. Create the Station Netif
   netif_sta_ = esp_netif_create_default_wifi_sta();
   if (!netif_sta_) return ESP_ERR_NO_MEM;
 
-  // 2. Init the Driver
+  // 2. Init the Driver (BLOCKING: ~500ms RF Calibration)
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   if (esp_err_t err = esp_wifi_init(&cfg)) {
     if (err == ESP_ERR_INVALID_STATE) {
@@ -75,7 +98,7 @@ EspResult<std::string> WifiSta::start(const WifiConfig& config) {
     }
   }
 
-  // 3. Register Event Handlers, passing 'this' as the argument
+  // 3. Register Event Handlers
   esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_trampoline, this,
                                       &wifi_handler_);
   esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_trampoline, this,
@@ -86,6 +109,7 @@ EspResult<std::string> WifiSta::start(const WifiConfig& config) {
   // 4. Configure Credentials
   wifi_config_t wifi_config = {};
   wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+
   if (config_.ssid && config_.password) {
     // Explicit config passed.
     strlcpy((char*)wifi_config.sta.ssid, config_.ssid, sizeof(wifi_config.sta.ssid));
@@ -100,23 +124,26 @@ EspResult<std::string> WifiSta::start(const WifiConfig& config) {
     }
   }
 
+  // Check if we need to provision
   if (wifi_config.sta.ssid[0] == '\0') {
     ESP_LOGI(TAG, "No Wi-Fi credentials provided or stored. Starting DPP provisioning...");
     provisioning_ = true;
     initialized_ = true;
+    // Returns the QR code string
     return start_dpp_provisioning("6");
   }
 
   esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
 
-  // 5. Start the Radio (this triggers WIFI_EVENT_STA_START asynchronously)
+  // 5. Start the Radio (BLOCKING: ~100-200ms)
+  // This triggers WIFI_EVENT_STA_START asynchronously
   if (esp_err_t err = esp_wifi_start()) {
     reset();  // Graceful rollback
     return err;
   }
 
   initialized_ = true;
-  return ESP_OK;
+  return std::string{};  // Success (Empty string indicates no provisioning needed)
 }
 
 void WifiSta::reset() {

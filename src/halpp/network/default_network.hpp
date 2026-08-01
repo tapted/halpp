@@ -12,6 +12,7 @@ class DefaultNetwork {
   EspResult<void> start();
 
   virtual ~DefaultNetwork() = default;
+  virtual void provision(const std::string& qrcode);
   virtual void network_ready(const esp_netif_ip_info_t& ip_info);
   virtual void network_lost();
 
@@ -20,6 +21,7 @@ class DefaultNetwork {
   HAL::NtpClient ntp_;
   HAL::WifiSta wifi_;
 
+  static void on_qrcode_ready(EspResult<std::string> qrcode, void* ctx);
   static void on_network_ready(const esp_netif_ip_info_t& ip_info, void* ctx) {
     DefaultNetwork* instance = static_cast<DefaultNetwork*>(ctx);
     instance->ntp_.start();

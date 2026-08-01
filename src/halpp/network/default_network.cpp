@@ -38,17 +38,20 @@ EspResult<void> DefaultNetwork::start() {
     /* continue */
   }
 
-  // Start Wi-Fi and define the cross-module triggers
-  if (EspError err = wifi_.start({
-          .ssid = WIFI_SSID,
-          .password = WIFI_PASS,
-          .on_got_ip = &DefaultNetwork::on_network_ready,
-          .on_disconnected = &DefaultNetwork::on_network_lost,
-          .ctx = this,
-      })) {
-    return err.log(TAG, "Failed to start Wi-Fi");
-  }
+  // Start async Wi-Fi init.
+  wifi_.start({
+      .ssid = WIFI_SSID,
+      .password = WIFI_PASS,
+      .on_ready = &DefaultNetwork::on_qrcode_ready,
+      .on_got_ip = &DefaultNetwork::on_network_ready,
+      .on_disconnected = &DefaultNetwork::on_network_lost,
+      .ctx = this,
+  });
   return ESP_OK;
+}
+
+void DefaultNetwork::provision(const std::string&) {
+  ESP_LOGW(TAG, "Provisioning required, but DefaultNetwork::provision() is not implemented.");
 }
 
 void DefaultNetwork::network_ready(const esp_netif_ip_info_t& ip_info) {
@@ -57,6 +60,21 @@ void DefaultNetwork::network_ready(const esp_netif_ip_info_t& ip_info) {
 
 void DefaultNetwork::network_lost() {
   ESP_LOGW(TAG, "Network connection lost");
+}
+
+// static
+void DefaultNetwork::on_qrcode_ready(EspResult<std::string> qrcode, void* ctx) {
+  DefaultNetwork* instance = static_cast<DefaultNetwork*>(ctx);
+  if (qrcode) {
+    if (qrcode->empty()) {
+      ESP_LOGI(TAG, "Wi-Fi credentials already provisioned. No QR code needed.");
+    } else {
+      ESP_LOGI(TAG, "DPP provisioning QR code: %s", qrcode->c_str());
+      instance->provision(*qrcode);
+    }
+  } else {
+    qrcode.strip().log_error(TAG, "Failed to Initialize Wifi or setup DPP provisioning");
+  }
 }
 
 // static
