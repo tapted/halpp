@@ -5,13 +5,12 @@
 namespace halpp::gpio {
 
 EspResult<> DebouncedInput::begin(Config config) {
-  pin_ = config.pin;
   on_changed_ = config.on_changed;
   ctx_ = config.ctx;
 
   // 1. Configure the GPIO hardware
   gpio_config_t io_conf = {};
-  io_conf.pin_bit_mask = (1ULL << config.pin);
+  io_conf.pin_bit_mask = (1ULL << pin_);
   io_conf.mode = GPIO_MODE_INPUT;
   io_conf.pull_up_en =
       (config.pull_mode == GPIO_PULLUP_ONLY || config.pull_mode == GPIO_PULLUP_PULLDOWN)
@@ -41,7 +40,7 @@ EspResult<> DebouncedInput::begin(Config config) {
   }
 
   // 4. Attach the pin to our static handler, passing 'this' as the argument
-  if (EspError err = gpio_isr_handler_add(config.pin, isr_handler, this)) {
+  if (EspError err = gpio_isr_handler_add(pin_, isr_handler, this)) {
     return err.log("DebouncedInput", "Failed to add ISR handler for GPIO");
   }
   isr_installed_ = true;

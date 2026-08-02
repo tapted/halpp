@@ -11,7 +11,6 @@ namespace halpp::gpio {
 class DebouncedInput {
  public:
   struct Config {
-    gpio_num_t pin;
     uint32_t debounce_ms = 100;
     gpio_int_type_t intr_type = GPIO_INTR_ANYEDGE;
 
@@ -23,7 +22,7 @@ class DebouncedInput {
     void* ctx = nullptr;
   };
 
-  constexpr DebouncedInput() = default;
+  explicit constexpr DebouncedInput(gpio_num_t pin) : pin_(pin) {}
   ~DebouncedInput();
 
   EspResult<> begin(Config config);
@@ -32,12 +31,12 @@ class DebouncedInput {
   bool get_level() const { return gpio_get_level(pin_) == 1; }
 
  private:
-  gpio_num_t pin_{GPIO_NUM_NC};
+  gpio_num_t pin_;
   void (*on_changed_)(bool state, void* ctx) = nullptr;
   void* ctx_ = nullptr;
   TimerHandle_t debounce_timer_ = nullptr;
   bool isr_installed_ = false;
-  
+
   // Track the last known stable state to prevent phantom callbacks
   bool last_stable_state_ = false;
 
