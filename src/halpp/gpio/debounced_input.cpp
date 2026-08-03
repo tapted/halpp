@@ -2,6 +2,8 @@
 
 #include <driver/gpio.h>
 #include <esp_log.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/timers.h>
 
 namespace halpp::gpio {
 
@@ -31,14 +33,7 @@ EspResult<> DebouncedInput::begin(Config config) {
                                  this,     // Bind instance to Timer ID
                                  timer_callback);
 
-  // 3. Install the ISR Service
-  // We ignore ESP_ERR_INVALID_STATE, which just means another driver already installed the global
-  // service
-  if (EspError err = gpio_install_isr_service(0)) {
-    if (err != ESP_ERR_INVALID_STATE) {
-      return err.log("DebouncedInput", "Failed to install ISR service");
-    }
-  }
+  // 3. Skip `gpio_install_isr_service(0)` here. Not the right place and will just pollutes logs.
 
   // 4. Attach the pin to our static handler, passing 'this' as the argument
   if (EspError err = gpio_isr_handler_add(pin_, isr_handler, this)) {

@@ -1,12 +1,12 @@
 #pragma once
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/timers.h>
+#include <hal/gpio_types.h>
 #include <soc/gpio_num.h>
 
 #include "espbase/esp_result.hpp"
 
-#include <hal/gpio_types.h>
+struct tmrTimerControl;
+typedef struct tmrTimerControl* TimerHandle_t;
 
 namespace halpp::gpio {
 
