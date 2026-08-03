@@ -1,10 +1,12 @@
 #pragma once
 
-#include <driver/gpio.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/timers.h>
+#include <soc/gpio_num.h>
 
 #include "espbase/esp_result.hpp"
+
+#include <hal/gpio_types.h>
 
 namespace halpp::gpio {
 
@@ -28,7 +30,7 @@ class DebouncedInput {
   EspResult<> begin(Config config);
 
   // Manual read capability
-  bool get_level() const { return gpio_get_level(pin_) == 1; }
+  bool get_level() const;
 
  private:
   gpio_num_t pin_;

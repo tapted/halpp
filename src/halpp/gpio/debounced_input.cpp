@@ -1,5 +1,6 @@
 #include "debounced_input.hpp"
 
+#include <driver/gpio.h>
 #include <esp_log.h>
 
 namespace halpp::gpio {
@@ -60,6 +61,10 @@ DebouncedInput::~DebouncedInput() {
   }
 
   gpio_reset_pin(pin_);
+}
+
+bool DebouncedInput::get_level() const {
+  return gpio_get_level(pin_) == 1;
 }
 
 void IRAM_ATTR DebouncedInput::isr_handler(void* arg) {
