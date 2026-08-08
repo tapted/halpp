@@ -1,6 +1,7 @@
 #pragma once
 
 #include "espbase/esp_result.hpp"
+#include "halpp/audio/speaker.hpp"
 #include "halpp/i2c/i2c_device.hpp"
 
 namespace halpp {
@@ -37,38 +38,40 @@ struct Es8311Config {
   Es8311Resolution resolution = Es8311Resolution::Res16;
 };
 
-class Es8311 {
+class Es8311 : public halpp::audio::Speaker {
  public:
   constexpr Es8311() = default;
-  ~Es8311() = default;
+  ~Es8311() { end_tx(); }
 
-  // Prevent copying to maintain strict ownership of the I2C device
-  Es8311(const Es8311&) = delete;
-  Es8311& operator=(const Es8311&) = delete;
+  EspResult<> set_voice_volume(int percent);
+  EspResult<> get_voice_volume(int& percent) const;
+  EspResult<> set_voice_mute(bool mute);
 
-  // Takes ownership of a configured I2CDevice and initializes the codec
-  EspResult<void> start(I2CDevice i2c_dev, const Es8311Config& config);
-  void reset();
+  EspResult<> set_voice_fade(Es8311Fade fade);
+  EspResult<> set_microphone_fade(Es8311Fade fade);
 
-  EspResult<void> set_voice_volume(int percent);
-  EspResult<void> get_voice_volume(int& percent) const;
-  EspResult<void> set_voice_mute(bool mute);
-
-  EspResult<void> set_voice_fade(Es8311Fade fade);
-  EspResult<void> set_microphone_fade(Es8311Fade fade);
-
-  EspResult<void> configure_microphone(bool digital_mic);
-  EspResult<void> configure_alc(bool enable);
+  EspResult<> configure_microphone(bool digital_mic);
+  EspResult<> configure_alc(bool enable);
 
  private:
   I2CDevice i2c_dev_;
 
-  EspResult<void> write_reg(uint8_t reg_addr, uint8_t data);
-  EspResult<void> read_reg(uint8_t reg_addr, uint8_t& data);
+  EspResult<> write_reg(uint8_t reg_addr, uint8_t data);
+  EspResult<> read_reg(uint8_t reg_addr, uint8_t& data);
 
-  EspResult<void> config_clock(const Es8311Config& config);
-  EspResult<void> config_format(Es8311Resolution res);
-  EspResult<void> config_sample_frequency(uint32_t mclk, uint32_t sample_rate);
+  EspResult<> config_clock(const Es8311Config& config);
+  EspResult<> config_format(Es8311Resolution res);
+  EspResult<> config_sample_frequency(uint32_t mclk, uint32_t sample_rate);
+
+  // Takes ownership of a configured I2CDevice and initializes the codec
+  EspResult<> start(I2CDevice i2c_dev, const Es8311Config& config);
+
+  virtual EspResult<> on_set_hardware_volume(uint8_t percent) override;
+  virtual EspResult<> init_default(uint8_t i2c_address) override;
+  virtual EspResult<> reset() override;
+
+  Es8311(const Es8311&) = delete;
+  Es8311& operator=(const Es8311&) = delete;
 };
 
 }  // namespace halpp

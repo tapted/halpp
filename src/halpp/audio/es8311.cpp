@@ -3,6 +3,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include "halpp/i2c/i2c_master.hpp"
+
 namespace halpp {
 
 namespace {
@@ -136,8 +138,9 @@ static const CoeffDiv* get_coeff(uint32_t mclk, uint32_t rate) {
 
 }  // namespace
 
-void Es8311::reset() {
-  i2c_dev_.reset();  // Automatically calls i2c_master_bus_rm_device
+EspResult<> Es8311::reset() {
+  set_voice_mute(true);     // Mute before shutdown to prevent pops
+  return i2c_dev_.reset();  // Automatically calls i2c_master_bus_rm_device
 }
 
 EspResult<void> Es8311::write_reg(uint8_t reg_addr, uint8_t data) {
@@ -359,6 +362,51 @@ EspResult<void> Es8311::configure_alc(bool enable) {
   return ESP_OK;
 }
 
+EspResult<> Es8311::on_set_hardware_volume(uint8_t percent) {
+  return set_voice_volume(percent);
+}
+
+EspResult<> Es8311::init_default(uint8_t i2c_address) {
+  // 1. Provision the device on the I2C bus via the singleton
+  EspResult<I2CDevice> dev_res = I2CMaster::instance().add_device(i2c_address, 100000);
+  if (!dev_res) return dev_res.strip().log_error("Es8311", "Failed to attach ES8311 to I2C bus");
+
+  // 2. Configure the Audio parameters
+  halpp::Es8311Config es_cfg = {};
+  es_cfg.mclk_from_mclk_pin = true;
+  es_cfg.mclk_frequency = config_.sample_rate * 256;
+  es_cfg.sample_frequency = config_.sample_rate;
+  switch (config_.bits_per_sample) {
+    case I2S_DATA_BIT_WIDTH_16BIT:
+      es_cfg.resolution = halpp::Es8311Resolution::Res16;
+      break;
+    case I2S_DATA_BIT_WIDTH_24BIT:
+      es_cfg.resolution = halpp::Es8311Resolution::Res24;
+      break;
+    case I2S_DATA_BIT_WIDTH_32BIT:
+      es_cfg.resolution = halpp::Es8311Resolution::Res32;
+      break;
+    default:
+      ESP_LOGW("Es8311", "Unsupported BITS_PER_SAMPLE %d", config_.bits_per_sample);
+      return ESP_ERR_INVALID_ARG;
+      break;
+  }
+
+  // 3. Inject the I2CDevice into the ES8311 module
+  if (EspError err = start(std::move(*dev_res), es_cfg)) {
+    return err.log("Es8311", "Failed to initialize ES8311 configuration");
+  }
+
+  set_voice_fade(halpp::Es8311Fade::Fade64LRCK);
+  configure_microphone(false);
+  set_voice_mute(false);
+  set_voice_volume(config_.default_volume);
+
+  // Short safety delay to let the DAC stabilize
+  vTaskDelay(pdMS_TO_TICKS(20));
+  return ESP_OK;
+}
+
 }  // namespace halpp
 
 // Registers reference.
@@ -430,3 +478,7 @@ EspResult<void> Es8311::configure_alc(bool enable) {
 #define ES8311_CHD1_REGFD 0xFD  /* CHIP ID1 */
 
 #define ES8311_MAX_REGISTER 0xFF
+
+/* ES8311 address: CE pin low - 0x18, CE pin high - 0x19 */
+#define ES8311_ADDRESS_0 0x18u
+#define ES8311_ADDRESS_1 0x19u
