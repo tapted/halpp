@@ -48,6 +48,8 @@ struct Defaults {
     static constexpr i2s_slot_mode_t SLOT_MODE = I2S_SLOT_MODE_STEREO;
 
     static constexpr uint8_t SPEAKER_I2C_ADDRESS = 0x18;  // Default I2C address for ES8311
+
+    static constexpr uint8_t MAX_MIXER_STREAMS = 4;
   };
 };  // Defaults
 }  // namespace HAL::detail

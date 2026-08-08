@@ -19,6 +19,8 @@ class Speaker {
     gpio_num_t amp_enable_pin = HAL::config::Audio::PIN_AMP_ENABLE;
   };
 
+  const Config& config() const { return config_; }
+
   bool is_running() const { return tx_chan_ != nullptr; }
   i2s_chan_handle_t get_tx_handle() const { return tx_chan_; }
 
@@ -31,6 +33,8 @@ class Speaker {
   EspResult<> set_amp_enable(bool enable);
   EspResult<> set_hardware_volume(uint8_t percent);
   uint8_t get_hardware_volume() const { return volume_; }
+
+  EspResult<size_t> write(const void* samples, size_t count, uint32_t timeout_ms = 1000000);
 
  protected:
   Config config_;
