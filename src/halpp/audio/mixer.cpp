@@ -2,7 +2,10 @@
 
 #include <cmath>
 #include <esp_audio_render.h>
+#include <esp_gmf_bit_cvt.h>
+#include <esp_gmf_ch_cvt.h>
 #include <esp_gmf_pool.h>
+#include <esp_gmf_rate_cvt.h>
 #include <esp_log.h>
 #include <numbers>
 
@@ -13,6 +16,35 @@ static constexpr uint32_t TONE_SAMPLE_RATE = 12000;  // 12kHz sample rate for to
 static constexpr uint8_t CHANNEL = 1;
 
 namespace halpp::audio {
+
+static int create_default_pool(esp_gmf_pool_handle_t* pool) {
+  *pool = NULL;
+  if (esp_gmf_pool_init(pool) != ESP_GMF_ERR_OK) {
+    return -1;
+  }
+
+  esp_gmf_element_handle_t el = NULL;
+  esp_ae_ch_cvt_cfg_t ch_cvt_cfg = DEFAULT_ESP_GMF_CH_CVT_CONFIG();
+  esp_gmf_ch_cvt_init(&ch_cvt_cfg, &el);
+  esp_gmf_pool_register_element(*pool, el, NULL);
+
+  esp_ae_bit_cvt_cfg_t bit_cvt_cfg = DEFAULT_ESP_GMF_BIT_CVT_CONFIG();
+  esp_gmf_bit_cvt_init(&bit_cvt_cfg, &el);
+  esp_gmf_pool_register_element(*pool, el, NULL);
+
+  esp_ae_rate_cvt_cfg_t rate_cvt_cfg = DEFAULT_ESP_GMF_RATE_CVT_CONFIG();
+  esp_gmf_rate_cvt_init(&rate_cvt_cfg, &el);
+  esp_gmf_pool_register_element(*pool, el, NULL);
+
+  // esp_ae_alc_cfg_t alc_cfg = DEFAULT_ESP_GMF_ALC_CONFIG();
+  // esp_gmf_alc_init(&alc_cfg, &el);
+  // esp_gmf_pool_register_element(*pool, el, NULL);
+
+  // esp_ae_sonic_cfg_t sonic_cfg = DEFAULT_ESP_GMF_SONIC_CONFIG();
+  // esp_gmf_sonic_init(&sonic_cfg, &el);
+  // esp_gmf_pool_register_element(*pool, el, NULL);
+  return 0;
+}
 
 static void tone_generator_task_16bit(EspTask<ToneParams>& task) {
   constexpr float pi = static_cast<float>(std::numbers::pi);
@@ -84,8 +116,10 @@ EspResult<> Mixer::begin() {
     return err.log(TAG, "Failed to start speaker");
   }
 
-  // 1. Initialize the GMF Object Pool
-  esp_gmf_pool_init(&pool_);
+  if (create_default_pool(&pool_) != 0) {
+    speaker_.end_tx();
+    return EspError(ESP_FAIL).log(TAG, "Failed to create GMF pool");
+  }
 
   // 2. Configure the Renderer Output
   esp_audio_render_cfg_t cfg = {

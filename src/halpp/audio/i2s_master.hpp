@@ -1,7 +1,8 @@
 #pragma once
 
-#include <esp_err.h>
 #include <mutex>
+
+#include "espbase/esp_result.hpp"
 
 struct i2s_channel_obj_t;
 typedef struct i2s_channel_obj_t* i2s_chan_handle_t;
@@ -16,8 +17,8 @@ class I2SMaster {
   }
 
   // Returns a handle and increments ref count
-  esp_err_t retain_tx(i2s_chan_handle_t* out_handle);
-  esp_err_t retain_rx(i2s_chan_handle_t* out_handle);
+  EspResult<> retain_tx(i2s_chan_handle_t* out_handle);
+  EspResult<> retain_rx(i2s_chan_handle_t* out_handle);
 
   // Decrements ref count and tears down if 0
   void release_tx();
@@ -27,6 +28,8 @@ class I2SMaster {
   I2SMaster();
   ~I2SMaster();
 
+  EspResult<> maybe_allocate_i2s();
+  void maybe_deallocate_i2s();
   void _deinit_i2s();
 
   std::mutex _mutex;

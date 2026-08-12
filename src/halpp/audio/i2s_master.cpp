@@ -42,15 +42,9 @@ I2SMaster::I2SMaster() {
 I2SMaster::~I2SMaster() {
 }
 
-esp_err_t I2SMaster::retain_tx(i2s_chan_handle_t* out_handle) {
+EspResult<> I2SMaster::retain_tx(i2s_chan_handle_t* out_handle) {
   std::lock_guard<std::mutex> lock(_mutex);
-
-  if (!_i2s_allocated) {
-    i2s_chan_config_t chan_cfg =
-        I2S_CHANNEL_DEFAULT_CONFIG(HAL::config::Audio::I2S_PORT, I2S_ROLE_MASTER);
-    ESP_ERROR_CHECK(i2s_new_channel(&chan_cfg, &_tx_handle, &_rx_handle));
-    _i2s_allocated = true;
-  }
+  maybe_allocate_i2s();
 
   if (!_tx_initialized) {
     // If Mic is currently running, briefly disable it to sync hardware clocks safely
@@ -62,7 +56,10 @@ esp_err_t I2SMaster::retain_tx(i2s_chan_handle_t* out_handle) {
     // Is this needed for stereo -> mono downmix?
     // cfg.slot_cfg.slot_mask = I2S_STD_SLOT_LEFT;
 
-    ESP_ERROR_CHECK(i2s_channel_init_std_mode(_tx_handle, &cfg));
+    if (EspError err = i2s_channel_init_std_mode(_tx_handle, &cfg)) {
+      maybe_deallocate_i2s();
+      return err.log(TAG, "Failed to initialize I2S TX channel");
+    }
     _tx_initialized = true;
 
     if (rx_was_running) i2s_channel_enable(_rx_handle);
@@ -74,15 +71,9 @@ esp_err_t I2SMaster::retain_tx(i2s_chan_handle_t* out_handle) {
   return ESP_OK;
 }
 
-esp_err_t I2SMaster::retain_rx(i2s_chan_handle_t* out_handle) {
+EspResult<> I2SMaster::retain_rx(i2s_chan_handle_t* out_handle) {
   std::lock_guard<std::mutex> lock(_mutex);
-
-  if (!_i2s_allocated) {
-    i2s_chan_config_t chan_cfg =
-        I2S_CHANNEL_DEFAULT_CONFIG(HAL::config::Audio::I2S_PORT, I2S_ROLE_MASTER);
-    ESP_ERROR_CHECK(i2s_new_channel(&chan_cfg, &_tx_handle, &_rx_handle));
-    _i2s_allocated = true;
-  }
+  if (EspError err = maybe_allocate_i2s()) return err;
 
   if (!_rx_initialized) {
     // If Speaker is currently running, briefly disable it to sync hardware clocks safely
@@ -90,7 +81,10 @@ esp_err_t I2SMaster::retain_rx(i2s_chan_handle_t* out_handle) {
     if (tx_was_running) i2s_channel_disable(_tx_handle);
 
     i2s_std_config_t cfg = get_std_cfg();
-    ESP_ERROR_CHECK(i2s_channel_init_std_mode(_rx_handle, &cfg));
+    if (EspError err = i2s_channel_init_std_mode(_rx_handle, &cfg)) {
+      maybe_deallocate_i2s();
+      return err.log(TAG, "Failed to initialize I2S RX channel");
+    }
     _rx_initialized = true;
 
     if (tx_was_running) i2s_channel_enable(_tx_handle);
@@ -108,7 +102,7 @@ void I2SMaster::release_tx() {
     _tx_refs--;
     if (_tx_refs == 0) i2s_channel_disable(_tx_handle);
   }
-  if (_tx_refs == 0 && _rx_refs == 0) _deinit_i2s();
+  maybe_deallocate_i2s();
 }
 
 void I2SMaster::release_rx() {
@@ -117,10 +111,25 @@ void I2SMaster::release_rx() {
     _rx_refs--;
     if (_rx_refs == 0) i2s_channel_disable(_rx_handle);
   }
-  if (_tx_refs == 0 && _rx_refs == 0) _deinit_i2s();
+  maybe_deallocate_i2s();
 }
 
-void I2SMaster::_deinit_i2s() {
+EspResult<> I2SMaster::maybe_allocate_i2s() {
+  if (!_i2s_allocated) {
+    i2s_chan_config_t chan_cfg =
+        I2S_CHANNEL_DEFAULT_CONFIG(HAL::config::Audio::I2S_PORT, I2S_ROLE_MASTER);
+    chan_cfg.auto_clear = true;
+    if (EspError err = i2s_new_channel(&chan_cfg, &_tx_handle, &_rx_handle)) {
+      return err.log(TAG, "Failed to allocate I2S channel");
+    }
+    _i2s_allocated = true;
+  }
+  return ESP_OK;
+}
+
+void I2SMaster::maybe_deallocate_i2s() {
+  if (_tx_refs != 0 || _rx_refs != 0) return;
+
   if (_i2s_allocated) {
     ESP_LOGI(TAG, "All audio users released. Tearing down I2S.");
     i2s_del_channel(_tx_handle);
