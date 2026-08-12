@@ -17,6 +17,7 @@ class Speaker {
     i2s_data_bit_width_t bits_per_sample = HAL::config::Audio::BITS_PER_SAMPLE;
     uint8_t default_volume = HAL::config::Audio::DEFAULT_VOLUME;
     gpio_num_t amp_enable_pin = HAL::config::Audio::PIN_AMP_ENABLE;
+    bool is_stereo = HAL::config::Audio::IS_STEREO;
   };
 
   const Config& config() const { return config_; }

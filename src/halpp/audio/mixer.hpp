@@ -38,7 +38,8 @@ class Mixer {
   // Stream Allocation
   // @param apply_master_volume: If false, the stream ignores master_volume_ updates
   // @param sample_rate: The sample rate of the incoming PCM data (0 = use hardware default)
-  int acquire_stream(bool apply_master_volume = true, uint32_t sample_rate = 0);
+  int acquire_stream(bool apply_master_volume = true, uint32_t sample_rate = 0,
+                     uint8_t channels = 1, uint8_t bits_per_sample = 0);
   void release_stream(int stream_index);
 
   // Replaces the FreeRTOS stream buffer - Opus decoder will call this

@@ -13,7 +13,6 @@
 
 static constexpr char TAG[] = "GMF_MIXER";
 static constexpr uint32_t TONE_SAMPLE_RATE = 12000;  // 12kHz sample rate for tone generation
-static constexpr uint8_t CHANNEL = 1;
 
 namespace halpp::audio {
 
@@ -71,10 +70,12 @@ static void tone_generator_task_16bit(EspTask<ToneParams>& task) {
     if (!infinite) {
       samples_this_chunk = std::min<uint32_t>(chunk_samples, total_samples - samples_generated);
     }
+    // Grab the live volume knob setting at the start of this 20ms chunk
+    float current_vol = mixer->get_master_volume();
 
     for (uint32_t i = 0; i < samples_this_chunk; ++i) {
       // Use single-precision sinf for hardware FPU acceleration
-      buffer[i] = static_cast<int16_t>(32767.0f * std::sinf(phase));
+      buffer[i] = static_cast<int16_t>(32767.0f * current_vol * std::sinf(phase));
 
       phase += phase_increment;
       if (phase >= 2.0f * pi) {
@@ -130,7 +131,7 @@ EspResult<> Mixer::begin() {
           {
               .sample_rate = speaker_.config().sample_rate,
               .bits_per_sample = static_cast<uint8_t>(speaker_.config().bits_per_sample),
-              .channel = CHANNEL,
+              .channel = speaker_.config().is_stereo ? uint8_t{2} : uint8_t{1},
           },
       .pool = pool_,
       .process_period{},
@@ -174,7 +175,8 @@ void Mixer::end() {
   is_running_ = false;
 }
 
-int Mixer::acquire_stream(bool apply_master_volume, uint32_t sample_rate) {
+int Mixer::acquire_stream(bool apply_master_volume, uint32_t sample_rate, uint8_t channels,
+                          uint8_t bits_per_sample) {
   if (!is_running_ || !streams_) return -1;
 
   for (int i = 0; i < max_streams_; ++i) {
@@ -194,11 +196,15 @@ int Mixer::acquire_stream(bool apply_master_volume, uint32_t sample_rate) {
 
       // Resolve the actual stream parameters (fallback to speaker hardware config if 0)
       uint32_t actual_sample_rate = (sample_rate > 0) ? sample_rate : speaker_.config().sample_rate;
+      uint8_t actual_bits_per_sample =
+          (bits_per_sample > 0) ? bits_per_sample
+                                : static_cast<uint8_t>(speaker_.config().bits_per_sample);
+      uint8_t actual_channels = (channels > 0) ? channels : (speaker_.config().is_stereo ? 2 : 1);
 
       esp_audio_render_sample_info_t in_info = {
           .sample_rate = actual_sample_rate,
-          .bits_per_sample = static_cast<uint8_t>(speaker_.config().bits_per_sample),
-          .channel = CHANNEL,
+          .bits_per_sample = actual_bits_per_sample,
+          .channel = actual_channels,
       };
 
       // Open the stream with the exact format of your source data!
@@ -265,7 +271,7 @@ void Mixer::play_tone(float frequency, uint32_t duration_ms) {
   tone_params_.mixer = this;
   tone_params_.frequency = frequency;
   tone_params_.duration_ms = duration_ms;
-  tone_params_.stream_id = acquire_stream(true, TONE_SAMPLE_RATE);
+  tone_params_.stream_id = acquire_stream(false, TONE_SAMPLE_RATE);
 
   if (tone_params_.stream_id < 0) {
     ESP_LOGW(TAG, "Failed to play tone: No free mixer streams available.");

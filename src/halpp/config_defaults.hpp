@@ -49,6 +49,9 @@ struct Defaults {
 
     static constexpr uint8_t SPEAKER_I2C_ADDRESS = 0x18;  // Default I2C address for ES8311
 
+    // Default to stereo. Usually the mic and speaker channels need to match in i2s. If you have
+    // two mics, this will need to be true even if you have a mono speaker.
+    static constexpr bool IS_STEREO = true;
     static constexpr uint8_t MAX_MIXER_STREAMS = 4;
   };
 };  // Defaults
