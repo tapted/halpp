@@ -31,7 +31,7 @@ class I2C7Seg {
   }
 
   // Initializes the default instance and attaches it to the bus
-  static EspResult<void> init_default(uint8_t i2c_address = HAL::config::Display7Seg::I2C_ADDRESS);
+  static EspResult<void> init_default(uint8_t i2c_address = halpp::config::Display7Seg::I2C_ADDRESS);
 
   // Releases the device handle for the default instance
   static EspResult<void> deinit_default();

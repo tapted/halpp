@@ -7,14 +7,14 @@
 
 #if __has_include("hal/board.hpp")
 #include "hal/board.hpp"
-namespace HAL {
+namespace halpp {
 // Alias to the user's custom struct
-using config = HAL::board::config;
-}  // namespace HAL
+using config = halpp::board::config;
+}  // namespace halpp
 #else
 #include "halpp/config_defaults.hpp"
-namespace HAL {
+namespace halpp {
 // No board file found? Alias directly to the framework defaults.
-using config = HAL::detail::Defaults;
-}  // namespace HAL
+using config = halpp::detail::Defaults;
+}  // namespace halpp
 #endif

@@ -11,16 +11,16 @@ namespace halpp::audio {
 // Generates the unified config required by Full-Duplex
 static i2s_std_config_t get_std_cfg() {
   i2s_std_config_t cfg = {
-      .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(HAL::config::Audio::SAMPLE_RATE),
-      .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(HAL::config::Audio::BITS_PER_SAMPLE,
-                                                      HAL::config::Audio::SLOT_MODE),
+      .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(halpp::config::Audio::SAMPLE_RATE),
+      .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(halpp::config::Audio::BITS_PER_SAMPLE,
+                                                      halpp::config::Audio::SLOT_MODE),
       .gpio_cfg =
           {
-              .mclk = HAL::config::Audio::PIN_MCLK,
-              .bclk = HAL::config::Audio::PIN_BCK,
-              .ws = HAL::config::Audio::PIN_WS,
-              .dout = HAL::config::Audio::PIN_DATA_OUT,
-              .din = HAL::config::Audio::PIN_DATA_IN,
+              .mclk = halpp::config::Audio::PIN_MCLK,
+              .bclk = halpp::config::Audio::PIN_BCK,
+              .ws = halpp::config::Audio::PIN_WS,
+              .dout = halpp::config::Audio::PIN_DATA_OUT,
+              .din = halpp::config::Audio::PIN_DATA_IN,
               .invert_flags = {.mclk_inv = false, .bclk_inv = false, .ws_inv = false},
           },
   };
@@ -117,7 +117,7 @@ void I2SMaster::release_rx() {
 EspResult<> I2SMaster::maybe_allocate_i2s() {
   if (!_i2s_allocated) {
     i2s_chan_config_t chan_cfg =
-        I2S_CHANNEL_DEFAULT_CONFIG(HAL::config::Audio::I2S_PORT, I2S_ROLE_MASTER);
+        I2S_CHANNEL_DEFAULT_CONFIG(halpp::config::Audio::I2S_PORT, I2S_ROLE_MASTER);
     chan_cfg.auto_clear = true;
     if (EspError err = i2s_new_channel(&chan_cfg, &_tx_handle, &_rx_handle)) {
       return err.log(TAG, "Failed to allocate I2S channel");

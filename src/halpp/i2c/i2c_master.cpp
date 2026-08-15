@@ -5,7 +5,7 @@
 
 #include "halpp/config.hpp"
 
-using I2CConfig = HAL::config::I2CConfig;
+using I2CConfig = halpp::config::I2CConfig;
 
 namespace {
 static constexpr char TAG[] = "I2C_Master";

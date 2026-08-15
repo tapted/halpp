@@ -26,7 +26,7 @@ struct ToneParams {
 class Mixer {
  public:
   explicit constexpr Mixer(Speaker& speaker,
-                           uint8_t max_streams = HAL::config::Audio::MAX_MIXER_STREAMS)
+                           uint8_t max_streams = halpp::config::Audio::MAX_MIXER_STREAMS)
       : speaker_(speaker), max_streams_(max_streams) {}
   ~Mixer();
 
@@ -62,7 +62,7 @@ class Mixer {
   };
 
   Speaker& speaker_;
-  const uint8_t max_streams_ = HAL::config::Audio::MAX_MIXER_STREAMS;
+  const uint8_t max_streams_ = halpp::config::Audio::MAX_MIXER_STREAMS;
   bool is_running_ = false;
   float master_volume_ = 1.0f;
 

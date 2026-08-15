@@ -16,7 +16,7 @@ EspResult<> Speaker::start_tx() {
     return err.log(TAG, "retain_tx");
   }
 
-  if (EspError err = init_default(HAL::config::Audio::SPEAKER_I2C_ADDRESS)) {
+  if (EspError err = init_default(halpp::config::Audio::SPEAKER_I2C_ADDRESS)) {
     end_tx();
     return err.log(TAG, "init_default");
   }

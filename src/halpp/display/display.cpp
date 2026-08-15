@@ -14,7 +14,7 @@
 
 static const char* TAG = "HAL::Display";
 
-using LVGLConfig = HAL::config::lvgl;
+using LVGLConfig = halpp::config::lvgl;
 
 // LVGL is global, so no point putting these on the Display instance. They are shared across all
 // displays.
@@ -160,9 +160,9 @@ EspResult<void> Display::init_lvgl() {
 
   lvgl_task.start(
       {
-          .stack_size = HAL::config::lvgl::TASK_STACK_SIZE,
-          .priority = HAL::config::lvgl::TASK_PRIORITY,
-          .core_id = HAL::config::lvgl::TASK_CORE_ID,
+          .stack_size = halpp::config::lvgl::TASK_STACK_SIZE,
+          .priority = halpp::config::lvgl::TASK_PRIORITY,
+          .core_id = halpp::config::lvgl::TASK_CORE_ID,
       },
       0, lvgl_step_function);
   return ESP_OK;

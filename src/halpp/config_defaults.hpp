@@ -5,7 +5,7 @@
 #include <hal/i2s_types.h>
 #include <soc/gpio_num.h>
 
-namespace HAL::detail {
+namespace halpp::detail {
 struct Defaults {
   struct I2CConfig {
     static constexpr gpio_num_t PIN_SDA = GPIO_NUM_8;
@@ -55,4 +55,4 @@ struct Defaults {
     static constexpr uint8_t MAX_MIXER_STREAMS = 4;
   };
 };  // Defaults
-}  // namespace HAL::detail
+}  // namespace halpp::detail
