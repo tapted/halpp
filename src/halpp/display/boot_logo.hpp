@@ -59,7 +59,7 @@ constexpr std::array<uint8_t, (Width * Height) / 8> generate_boot_logo() {
       }
 
       // If the pixel is part of the logo, map it to the SSD1306 page memory layout
-      if (draw != config::Display::INVERT_COLORS) {
+      if (draw != halpp::config::Display::INVERT_COLORS) {
         // SSD1306 splits pixels of height into 8 "pages" of 8 bits each.
         // LSB is top, MSB is bottom for each byte.
         int page = y / 8;

@@ -1,5 +1,6 @@
 #include "halpp/audio/speaker.hpp"
 
+#include <driver/gpio.h>
 #include <driver/i2s_std.h>
 #include <esp_log.h>
 
@@ -56,10 +57,10 @@ EspResult<> Speaker::set_hardware_volume(uint8_t percent) {
 
 EspResult<size_t> Speaker::write(const void* samples, size_t count, uint32_t timeout_ms) {
   if (!tx_chan_) return EspError(ESP_ERR_INVALID_STATE);
-  
+
   size_t bytes_written = 0;
   esp_err_t err = i2s_channel_write(tx_chan_, samples, count, &bytes_written, timeout_ms);
-  
+
   if (err != ESP_OK) return EspError(err);
   return bytes_written;
 }
