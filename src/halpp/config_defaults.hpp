@@ -4,6 +4,7 @@
 #include <driver/i2s_types.h>
 #include <hal/i2s_types.h>
 #include <soc/gpio_num.h>
+#include <hal/spi_types.h>
 
 namespace halpp::detail {
 struct Defaults {
@@ -43,6 +44,9 @@ struct Defaults {
     static constexpr bool INVERT_COLORS = true;   // Invert colors (e.g. for OLEDs - white on black)
     static constexpr bool SWAP_XY = false;        // Swap X/Y for portrait vs landscape
     static constexpr bool TRANSPOSE_1BIT = true;  // Transpose displays for LVGL
+  };
+  struct Touch {
+    static constexpr gpio_num_t PIN_INTERRUPT = GPIO_NUM_4;  // Touch interrupt pin
   };
   struct Display7Seg {
     static constexpr uint8_t I2C_ADDRESS = 0x70;  // Default I2C address for HT16K33
