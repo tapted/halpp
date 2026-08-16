@@ -11,7 +11,8 @@ namespace HAL {
 
 static constexpr const char TAG[] = "I2C7Seg";
 
-static constexpr int FAIL_COUNT_SKIP_SHOW_TIME_THRESHOLD = 5;
+// Number of consecutive write_display() failures before we skip the write to avoid flooding logs.
+static constexpr int FAIL_COUNT_SKIP_WRITE_DISPLAY_THRESHOLD = 5;
 
 // ASCII to 7-segment bitmask table
 static constexpr std::array<uint8_t, 96> kSevenSegFontTable = {
@@ -181,10 +182,11 @@ uint32_t I2C7Seg::show_time(tm* timeinfo_out) {
   snprintf(buf, sizeof(buf), "%02d%02d", timeinfo.tm_hour, timeinfo.tm_min);
   print(buf);
 
-  if (consecutive_fail_count() < FAIL_COUNT_SKIP_SHOW_TIME_THRESHOLD) {
+  if (consecutive_fail_count() < FAIL_COUNT_SKIP_WRITE_DISPLAY_THRESHOLD) {
     write_display().log_error(TAG, "Failed to update time display");
-  } else if (consecutive_fail_count() == FAIL_COUNT_SKIP_SHOW_TIME_THRESHOLD) {
-    ESP_LOGW(TAG, "Skipping time display updates due to consecutive I2C failures");
+    if (consecutive_fail_count() == FAIL_COUNT_SKIP_WRITE_DISPLAY_THRESHOLD) {
+      ESP_LOGW(TAG, "Skipping time display updates due to consecutive I2C failures");
+    }
   }
 
   if (timeinfo.tm_min == 0) {
