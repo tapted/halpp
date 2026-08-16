@@ -27,8 +27,8 @@ struct Defaults {
     static constexpr gpio_num_t PIN_UART_RX = GPIO_NUM_44;  // USB-UART RX (from PC)
   };
   struct I2CConfig {
-    static constexpr gpio_num_t PIN_SDA = GPIO_NUM_8;
-    static constexpr gpio_num_t PIN_SCL = GPIO_NUM_9;
+    static constexpr gpio_num_t PIN_SDA = GPIO_NUM_11;
+    static constexpr gpio_num_t PIN_SCL = GPIO_NUM_10;
 
     static constexpr uint8_t BUS_NUM = 0;          // I2C_NUM_0
     static constexpr uint32_t CLK_SPEED = 400000;  // 400kHz standard
