@@ -3,8 +3,9 @@
 #include <cstdint>
 #include <driver/i2s_types.h>
 #include <hal/i2s_types.h>
-#include <soc/gpio_num.h>
+#include <hal/ledc_types.h>
 #include <hal/spi_types.h>
+#include <soc/gpio_num.h>
 
 namespace halpp::detail {
 struct Defaults {
@@ -12,6 +13,9 @@ struct Defaults {
     static constexpr gpio_num_t PIN_BOOT = GPIO_NUM_0;  // Boot mode control strapping pin
   };
   struct Qspi {
+    static constexpr spi_host_device_t SPI_HOST = SPI2_HOST;
+    static constexpr uint32_t SPI_CLK_WRITE_HZ = 80 * 1000 * 1000;  // 80MHz for write
+
     static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_21;   // Chip Select (CS)
     static constexpr gpio_num_t PIN_SERIAL_CLOCK = GPIO_NUM_40;  // Serial Clock (SCK)
 
@@ -44,8 +48,14 @@ struct Defaults {
     static constexpr bool INVERT_COLORS = true;   // Invert colors (e.g. for OLEDs - white on black)
     static constexpr bool SWAP_XY = false;        // Swap X/Y for portrait vs landscape
     static constexpr bool TRANSPOSE_1BIT = true;  // Transpose displays for LVGL
+
+    static constexpr ledc_channel_t BACKLIGHT_LEDC_CHANNEL = LEDC_CHANNEL_0;
+    static constexpr ledc_timer_t BACKLIGHT_LEDC_TIMER = LEDC_TIMER_0;
+    static constexpr uint32_t BACKLIGHT_LEDC_FREQ = 5000;
+    static constexpr ledc_timer_bit_t BACKLIGHT_LEDC_RESOLUTION = LEDC_TIMER_13_BIT;
   };
   struct Touch {
+    static constexpr uint8_t I2C_ADDRESS = 0x15;             // Default I2C address for CST816S
     static constexpr gpio_num_t PIN_INTERRUPT = GPIO_NUM_4;  // Touch interrupt pin
   };
   struct Display7Seg {
