@@ -9,7 +9,9 @@
 
 namespace HAL {
 
-static const char* TAG = "I2C7Seg";
+static constexpr const char TAG[] = "I2C7Seg";
+
+static constexpr int FAIL_COUNT_SKIP_SHOW_TIME_THRESHOLD = 5;
 
 // ASCII to 7-segment bitmask table
 static constexpr std::array<uint8_t, 96> kSevenSegFontTable = {
@@ -82,7 +84,12 @@ EspResult<void> I2C7Seg::write_display() {
     buffer[1 + 2 * i] = display_buffer_[i] & 0xFF;
     buffer[2 + 2 * i] = (display_buffer_[i] >> 8) & 0xFF;
   }
-  return i2c_dev_.tx(buffer);
+  if (EspError err = i2c_dev_.tx(buffer)) {
+    consecutive_fail_count_++;
+    return err;
+  }
+  consecutive_fail_count_ = 0;
+  return ESP_OK;
 }
 
 void I2C7Seg::clear() {
@@ -174,7 +181,11 @@ uint32_t I2C7Seg::show_time(tm* timeinfo_out) {
   snprintf(buf, sizeof(buf), "%02d%02d", timeinfo.tm_hour, timeinfo.tm_min);
   print(buf);
 
-  write_display().log_error(TAG, "Failed to update time display");
+  if (consecutive_fail_count() < FAIL_COUNT_SKIP_SHOW_TIME_THRESHOLD) {
+    write_display().log_error(TAG, "Failed to update time display");
+  } else if (consecutive_fail_count() == FAIL_COUNT_SKIP_SHOW_TIME_THRESHOLD) {
+    ESP_LOGW(TAG, "Skipping time display updates due to consecutive I2C failures");
+  }
 
   if (timeinfo.tm_min == 0) {
     ESP_LOGI(TAG, "Current time: %02d:%02d:%02d.%03ld", timeinfo.tm_hour, timeinfo.tm_min,

@@ -59,9 +59,12 @@ class I2C7Seg {
   // boundary.
   uint32_t show_time(tm* timeinfo_out = nullptr);
 
+  int consecutive_fail_count() const { return consecutive_fail_count_; }
+
  private:
   I2CDevice i2c_dev_;
   std::array<uint16_t, 8> display_buffer_{0};
+  int consecutive_fail_count_ = 0;
 };
 
 }  // namespace HAL

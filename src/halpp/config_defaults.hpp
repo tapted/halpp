@@ -7,6 +7,25 @@
 
 namespace halpp::detail {
 struct Defaults {
+  struct System {
+    static constexpr gpio_num_t PIN_BOOT = GPIO_NUM_0;  // Boot mode control strapping pin
+  };
+  struct Qspi {
+    static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_21;   // Chip Select (CS)
+    static constexpr gpio_num_t PIN_SERIAL_CLOCK = GPIO_NUM_40;  // Serial Clock (SCK)
+
+    // Data Lanes
+    static constexpr gpio_num_t PIN_QSPI_SDA_0 = GPIO_NUM_41;
+    static constexpr gpio_num_t PIN_QSPI_SDA_1 = GPIO_NUM_45;  // Strapping pin: VDD_SPI voltage
+    static constexpr gpio_num_t PIN_QSPI_SDA_2 = GPIO_NUM_42;
+    static constexpr gpio_num_t PIN_QSPI_SDA_3 = GPIO_NUM_46;
+  };
+  struct Usb {
+    static constexpr gpio_num_t PIN_USB_DM = GPIO_NUM_19;   // "Native" USB D- (Data Minus)
+    static constexpr gpio_num_t PIN_USB_DP = GPIO_NUM_20;   // "Native" USB D+ (Data Plus)
+    static constexpr gpio_num_t PIN_UART_TX = GPIO_NUM_43;  // USB-UART TX (to PC)
+    static constexpr gpio_num_t PIN_UART_RX = GPIO_NUM_44;  // USB-UART RX (from PC)
+  };
   struct I2CConfig {
     static constexpr gpio_num_t PIN_SDA = GPIO_NUM_8;
     static constexpr gpio_num_t PIN_SCL = GPIO_NUM_9;
@@ -18,6 +37,9 @@ struct Defaults {
     static constexpr uint32_t SCL_WAIT_US = 0;  // 0 = use default
   };
   struct Display {
+    static constexpr gpio_num_t PIN_TEARING_EFFECT = GPIO_NUM_18;  // Tearing Effect (TE)
+    static constexpr gpio_num_t PIN_BACKLIGHT_PWM = GPIO_NUM_9;    // Backlight PWM control
+
     static constexpr bool INVERT_COLORS = true;   // Invert colors (e.g. for OLEDs - white on black)
     static constexpr bool SWAP_XY = false;        // Swap X/Y for portrait vs landscape
     static constexpr bool TRANSPOSE_1BIT = true;  // Transpose displays for LVGL
@@ -31,6 +53,9 @@ struct Defaults {
     static constexpr uint32_t TASK_STACK_SIZE = 8192;  // LVGL task stack size
     static constexpr uint32_t TASK_PRIORITY = 5;       // LVGL task priority
     static constexpr uint8_t TASK_CORE_ID = 1;         // LVGL task core affinity
+  };
+  struct Buzzer {
+    static constexpr gpio_num_t PIN_PWM = GPIO_NUM_13;  // PWM output for passive buzzer
   };
   struct Audio {
     static constexpr uint32_t SAMPLE_RATE = 48000;             // Default sample rate for I2S
