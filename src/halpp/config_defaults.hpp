@@ -15,10 +15,10 @@ struct Defaults {
     static constexpr gpio_num_t PIN_SERIAL_CLOCK = GPIO_NUM_40;  // Serial Clock (SCK)
 
     // Data Lanes
-    static constexpr gpio_num_t PIN_QSPI_SDA_0 = GPIO_NUM_41;
+    static constexpr gpio_num_t PIN_QSPI_SDA_0 = GPIO_NUM_46;
     static constexpr gpio_num_t PIN_QSPI_SDA_1 = GPIO_NUM_45;  // Strapping pin: VDD_SPI voltage
     static constexpr gpio_num_t PIN_QSPI_SDA_2 = GPIO_NUM_42;
-    static constexpr gpio_num_t PIN_QSPI_SDA_3 = GPIO_NUM_46;
+    static constexpr gpio_num_t PIN_QSPI_SDA_3 = GPIO_NUM_41;
   };
   struct Usb {
     static constexpr gpio_num_t PIN_USB_DM = GPIO_NUM_19;   // "Native" USB D- (Data Minus)
@@ -38,7 +38,7 @@ struct Defaults {
   };
   struct Display {
     static constexpr gpio_num_t PIN_TEARING_EFFECT = GPIO_NUM_18;  // Tearing Effect (TE)
-    static constexpr gpio_num_t PIN_BACKLIGHT_PWM = GPIO_NUM_9;    // Backlight PWM control
+    static constexpr gpio_num_t PIN_BACKLIGHT_PWM = GPIO_NUM_5;    // Backlight PWM control
 
     static constexpr bool INVERT_COLORS = true;   // Invert colors (e.g. for OLEDs - white on black)
     static constexpr bool SWAP_XY = false;        // Swap X/Y for portrait vs landscape
