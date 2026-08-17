@@ -17,16 +17,12 @@ EspResult<> Backlight::begin() {
       HAL::Timer::configure(config::Display::BACKLIGHT_LEDC_TIMER, LEDC_AUTO_CLK,
                             config::Display::BACKLIGHT_LEDC_RESOLUTION,
                             config::Display::BACKLIGHT_LEDC_FREQ, LEDC_LOW_SPEED_MODE);
-  if (!timer_res) {
-    return timer_res.strip().log_error(TAG, "Failed to configure backlight timer");
-  }
+  if (!timer_res) return timer_res.strip().log_error(TAG, "Failed to configure backlight timer");
 
   EspResult<HAL::Channel> chan_res = timer_res->add_channel(config::Display::BACKLIGHT_LEDC_CHANNEL,
                                                             config::Display::PIN_BACKLIGHT_PWM,
                                                             0);  // idle_level
-  if (!chan_res) {
-    return chan_res.strip().log_error(TAG, "Failed to configure backlight channel");
-  }
+  if (!chan_res) return chan_res.strip().log_error(TAG, "Failed to configure backlight channel");
 
   // Install the fade service globally. It returns ESP_ERR_INVALID_STATE if already installed by
   // another component, which is safe to ignore.
@@ -40,6 +36,12 @@ EspResult<> Backlight::begin() {
 
   ESP_LOGI(TAG, "Backlight initialized");
   return ESP_OK;
+}
+
+EspResult<> Backlight::reset() {
+  ledc_fade_func_uninstall();
+  channel_.reset();
+  return timer_.reset();
 }
 
 EspResult<> Backlight::set_level(uint8_t level, int fade_ms) {

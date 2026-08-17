@@ -15,6 +15,7 @@ class Backlight {
 
   // Initializes the LEDC timer, channel, and fade service
   EspResult<> begin();
+  EspResult<> reset();
 
   // Sets the backlight level (0 to config::Display::BACKLIGHT_MAX) with an optional fade
   EspResult<> set_level(uint8_t level, int fade_ms = 0);
