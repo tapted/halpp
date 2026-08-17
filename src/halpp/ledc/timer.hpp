@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include <soc/gpio_num.h>
 #include <hal/ledc_types.h>
+#include <soc/gpio_num.h>
 
 #include "espbase/esp_result.hpp"
 
@@ -38,8 +38,8 @@ class Timer {
   explicit operator bool() const { return timer_ != LEDC_TIMER_MAX; }
   bool operator!() const { return timer_ == LEDC_TIMER_MAX; }
 
-  EspResult<void> reset();
-  EspResult<void> set_freq(uint32_t freq_hz);
+  EspResult<> reset();
+  EspResult<> set_freq(uint32_t freq_hz);
 
  private:
   ledc_mode_t mode_ = LEDC_SPEED_MODE_MAX;

@@ -22,12 +22,12 @@ Channel& Channel::operator=(Channel&& other) noexcept {
   return *this;
 }
 
-EspResult<void> Channel::stop() {
+EspResult<> Channel::stop() {
   if (!(*this)) return ESP_ERR_INVALID_STATE;
   return ledc_stop(mode_, channel_, idle_level_);
 }
 
-EspResult<void> Channel::reset() {
+EspResult<> Channel::reset() {
   if (channel_ != LEDC_CHANNEL_MAX) {
     ledc_channel_config_t deconfig{};
     deconfig.speed_mode = mode_;
@@ -40,14 +40,29 @@ EspResult<void> Channel::reset() {
   return ESP_OK;
 }
 
-EspResult<void> Channel::set_duty(uint32_t duty) {
+EspResult<> Channel::set_duty(uint32_t duty) {
   if (!(*this)) return ESP_ERR_INVALID_STATE;
   return ledc_set_duty(mode_, channel_, duty);
 }
 
-EspResult<void> Channel::update_duty() {
+EspResult<> Channel::update_duty() {
   if (!(*this)) return ESP_ERR_INVALID_STATE;
   return ledc_update_duty(mode_, channel_);
+}
+
+EspResult<> Channel::fade_stop() {
+  if (!(*this)) return ESP_ERR_INVALID_STATE;
+  return ledc_fade_stop(mode_, channel_);
+}
+
+EspResult<> Channel::set_fade_with_time(uint32_t target_duty, int max_fade_time_ms) {
+  if (!(*this)) return ESP_ERR_INVALID_STATE;
+  return ledc_set_fade_with_time(mode_, channel_, target_duty, max_fade_time_ms);
+}
+
+EspResult<> Channel::fade_start(ledc_fade_mode_t wait_done) {
+  if (!(*this)) return ESP_ERR_INVALID_STATE;
+  return ledc_fade_start(mode_, channel_, wait_done);
 }
 
 }  // namespace HAL

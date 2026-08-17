@@ -53,6 +53,7 @@ struct Defaults {
     static constexpr ledc_timer_t BACKLIGHT_LEDC_TIMER = LEDC_TIMER_0;
     static constexpr uint32_t BACKLIGHT_LEDC_FREQ = 5000;
     static constexpr ledc_timer_bit_t BACKLIGHT_LEDC_RESOLUTION = LEDC_TIMER_13_BIT;
+    static constexpr uint8_t BACKLIGHT_MAX = 100;  // Max backlight level (0-100)
   };
   struct Touch {
     static constexpr uint8_t I2C_ADDRESS = 0x15;             // Default I2C address for CST816S

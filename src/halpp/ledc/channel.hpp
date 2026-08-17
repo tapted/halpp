@@ -29,13 +29,18 @@ class Channel {
   bool operator!() const { return channel_ == LEDC_CHANNEL_MAX; }
 
   // Temporarily halts the PWM output but retains ownership
-  EspResult<void> stop();
+  EspResult<> stop();
 
   // Halts output and permanently releases the handle
-  EspResult<void> reset();
+  EspResult<> reset();
 
-  EspResult<void> set_duty(uint32_t duty);
-  EspResult<void> update_duty();
+  EspResult<> set_duty(uint32_t duty);
+  EspResult<> update_duty();
+
+  // Fading controls
+  EspResult<> fade_stop();
+  EspResult<> set_fade_with_time(uint32_t target_duty, int max_fade_time_ms);
+  EspResult<> fade_start(ledc_fade_mode_t wait_done = LEDC_FADE_NO_WAIT);
 
  private:
   ledc_mode_t mode_ = LEDC_SPEED_MODE_MAX;

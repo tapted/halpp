@@ -64,7 +64,7 @@ Timer& Timer::operator=(Timer&& other) noexcept {
   return *this;
 }
 
-EspResult<void> Timer::reset() {
+EspResult<> Timer::reset() {
   if (timer_ != LEDC_TIMER_MAX) {
     ledc_timer_pause(mode_, timer_);
 
@@ -84,7 +84,7 @@ EspResult<void> Timer::reset() {
   return ESP_OK;
 }
 
-EspResult<void> Timer::set_freq(uint32_t freq_hz) {
+EspResult<> Timer::set_freq(uint32_t freq_hz) {
   if (!(*this)) return ESP_ERR_INVALID_STATE;
   return ledc_set_freq(mode_, timer_, freq_hz);
 }
