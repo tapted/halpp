@@ -1,5 +1,6 @@
 #include "halpp/display/backlight.hpp"
 
+#include <cmath>
 #include <driver/ledc.h>
 #include <esp_log.h>
 
@@ -51,7 +52,11 @@ EspResult<> Backlight::set_level(uint8_t level, int fade_ms) {
 
   // Calculate duty cycle
   uint32_t max_duty = (1 << config::Display::BACKLIGHT_LEDC_RESOLUTION) - 1;
-  uint32_t duty = (max_duty * level) / config::Display::BACKLIGHT_MAX;
+  // Gamma 2.2 Perception Correction
+  // Maps linear UI percentages to logarithmic human eye sensitivity
+  float normalized = static_cast<float>(level) / static_cast<float>(config::Display::BACKLIGHT_MAX);
+  float gamma_corrected = std::powf(normalized, 2.2f);
+  uint32_t duty = static_cast<uint32_t>(gamma_corrected * static_cast<float>(max_duty) + 0.5f);
 
   // Interrupt any fades currently in progress
   if (EspError err = channel_.fade_stop()) {
