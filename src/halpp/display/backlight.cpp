@@ -6,7 +6,7 @@
 
 #include "halpp/config.hpp"
 
-static const char* TAG = "BACKLIGHT";
+static constexpr const char TAG[] = "BACKLIGHT";
 
 namespace halpp::display {
 
