@@ -90,7 +90,8 @@ EspResult<void> Ssd1306::begin() {
 
   if (EspError err = esp_lcd_panel_init(panel_handle_)) return err;
 
-  invert(true);  // Invert in hardware for now. We maybe need to read the lvgl palette properly.
+  // Invert in hardware for now. We maybe need to read the lvgl palette properly.
+  invert(halpp::config::Display::INVERT_COLORS);
 
   // Ensure RAM doesn't show static on boot
   if (config_.width == 128 && config_.height == 64) {
