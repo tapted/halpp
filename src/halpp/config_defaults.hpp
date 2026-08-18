@@ -45,9 +45,9 @@ struct Defaults {
     static constexpr gpio_num_t PIN_TEARING_EFFECT = GPIO_NUM_18;  // Tearing Effect (TE)
     static constexpr gpio_num_t PIN_BACKLIGHT_PWM = GPIO_NUM_5;    // Backlight PWM control
 
-    static constexpr bool INVERT_COLORS = true;   // Invert colors (e.g. for OLEDs - white on black)
+    static constexpr uint8_t BITS_PER_PIXEL = 16;
+    static constexpr bool INVERT_COLORS = false;  // Invert colors (e.g. for OLEDs - white on black)
     static constexpr bool SWAP_XY = false;        // Swap X/Y for portrait vs landscape
-    static constexpr bool TRANSPOSE_1BIT = true;  // Transpose displays for LVGL
 
     static constexpr ledc_channel_t BACKLIGHT_LEDC_CHANNEL = LEDC_CHANNEL_0;
     static constexpr ledc_timer_t BACKLIGHT_LEDC_TIMER = LEDC_TIMER_0;
