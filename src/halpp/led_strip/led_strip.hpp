@@ -12,7 +12,7 @@
 
 #include "espbase/esp_result.hpp"
 
-namespace HAL {
+namespace halpp {
 
 // Configuration struct with defaults optimized for WS2812
 struct RmtConfig {
@@ -22,6 +22,7 @@ struct RmtConfig {
   led_color_component_format_t color_fmt = LED_STRIP_COLOR_COMPONENT_FMT_GRB;
   uint32_t resolution_hz = 10 * 1000 * 1000;  // 10MHz resolution default
   bool with_dma = false;
+  bool auto_refresh = max_leds == 1;
 };
 
 class LedStrip {
@@ -34,7 +35,6 @@ class LedStrip {
   static EspResult<> init_default(const RmtConfig& config);
   static void deinit_default() { default_optional().reset(); }
 
-  // Can be moved. Not copied.
   LedStrip(const LedStrip&) = delete;
   LedStrip& operator=(const LedStrip&) = delete;
   LedStrip(LedStrip&& other) noexcept;
@@ -56,8 +56,13 @@ class LedStrip {
 
  private:
   led_strip_handle_t handle_ = nullptr;
+  bool auto_refresh_ = false;
 
-  explicit LedStrip(led_strip_handle_t handle) : handle_(handle) {}
+  explicit LedStrip(led_strip_handle_t handle, bool auto_refresh)
+      : handle_(handle), auto_refresh_(auto_refresh) {}
+
+  template <typename Func>
+  EspResult<> helper(Func func);
 
   static std::optional<LedStrip>& default_optional() {
     static std::optional<LedStrip> inst;
@@ -65,4 +70,4 @@ class LedStrip {
   }
 };
 
-}  // namespace HAL
+}  // namespace halpp

@@ -4,10 +4,11 @@
 #include <led_strip.h>
 #include <led_strip_rmt.h>
 
-namespace HAL {
+namespace halpp {
 
 LedStrip::LedStrip(LedStrip&& other) noexcept {
   handle_ = other.handle_;
+  auto_refresh_ = other.auto_refresh_;
   other.handle_ = nullptr;
 }
 
@@ -15,6 +16,7 @@ LedStrip& LedStrip::operator=(LedStrip&& other) noexcept {
   if (this != &other) {
     reset();
     handle_ = other.handle_;
+    auto_refresh_ = other.auto_refresh_;
     other.handle_ = nullptr;
   }
   return *this;
@@ -40,15 +42,15 @@ EspResult<LedStrip> LedStrip::create_rmt(const RmtConfig& config) {
   }
 
   // Ensure LEDs are off by default upon initialization
-  led_strip_clear(handle);
+  EspError::check(led_strip_clear(handle)).log("LedStrip", "Ignoring clear() error");
 
-  return EspResult<LedStrip>::ok(LedStrip(handle));
+  return EspResult<LedStrip>::ok(LedStrip(handle, config.auto_refresh));
 }
 
 EspResult<> LedStrip::init_default(const RmtConfig& config) {
   std::optional<LedStrip>& opt = default_optional();
   if (opt) return ESP_ERR_INVALID_STATE;  // Already initialized
-  EspResult<LedStrip> result = HAL::LedStrip::create_rmt(config);
+  EspResult<LedStrip> result = LedStrip::create_rmt(config);
   if (!result) {
     return result.strip().log_error("LedStrip", "Failed to init_default");
   }
@@ -67,25 +69,29 @@ EspResult<> LedStrip::reset() {
   return ESP_OK;
 }
 
-EspResult<> LedStrip::set_pixel(uint32_t index, uint32_t r, uint32_t g, uint32_t b) {
+template <typename Func>
+EspResult<> LedStrip::helper(Func func) {
   if (!handle_) return ESP_ERR_INVALID_STATE;
-  return led_strip_set_pixel(handle_, index, r, g, b);
+  if (EspError err = func()) return err;
+  if (auto_refresh_) return led_strip_refresh(handle_);
+  return ESP_OK;
+}
+
+EspResult<> LedStrip::set_pixel(uint32_t index, uint32_t r, uint32_t g, uint32_t b) {
+  return helper([=, this] { return led_strip_set_pixel(handle_, index, r, g, b); });
 }
 
 EspResult<> LedStrip::set_pixel_rgbw(uint32_t index, uint32_t r, uint32_t g, uint32_t b,
                                      uint32_t w) {
-  if (!handle_) return ESP_ERR_INVALID_STATE;
-  return led_strip_set_pixel_rgbw(handle_, index, r, g, b, w);
+  return helper([=, this] { return led_strip_set_pixel_rgbw(handle_, index, r, g, b, w); });
 }
 
 EspResult<> LedStrip::set_pixel_hsv(uint32_t index, uint16_t hue, uint8_t sat, uint8_t val) {
-  if (!handle_) return ESP_ERR_INVALID_STATE;
-  return led_strip_set_pixel_hsv(handle_, index, hue, sat, val);
+  return helper([=, this] { return led_strip_set_pixel_hsv(handle_, index, hue, sat, val); });
 }
 
 EspResult<> LedStrip::set_pixel_hsv_16(uint32_t index, uint16_t hue, uint16_t sat, uint16_t val) {
-  if (!handle_) return ESP_ERR_INVALID_STATE;
-  return led_strip_set_pixel_hsv_16(handle_, index, hue, sat, val);
+  return helper([=, this] { return led_strip_set_pixel_hsv_16(handle_, index, hue, sat, val); });
 }
 
 EspResult<> LedStrip::refresh() {
@@ -98,7 +104,7 @@ EspResult<> LedStrip::clear() {
   return led_strip_clear(handle_);
 }
 
-}  // namespace HAL
+}  // namespace halpp
 
 #else
 #pragma message("Install espressif/led_strip to use LedStrip module")

@@ -182,7 +182,7 @@ struct Defaults : public SharedDefaults {
   struct SdCard : public SharedDefaults::SdCard {
     static constexpr gpio_num_t PIN_SERIAL_CLOCK = GPIO_NUM_7;
     static constexpr gpio_num_t PIN_MISO = GPIO_NUM_5;
-    static constexpr gpio_num_t PIN_MOSI = GPIO_NUM_5;
+    static constexpr gpio_num_t PIN_MOSI = GPIO_NUM_6;
     static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_4;
   };
 };  // Defaults
