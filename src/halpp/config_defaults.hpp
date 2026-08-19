@@ -111,8 +111,7 @@ struct SharedDefaults {
 };  // SharedDefaults
 
 #if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32
-struct Defaults {
-  struct System : public SharedDefaults::System {};
+struct Defaults : public SharedDefaults {
   struct SpiBus : public SharedDefaults::SpiBus {
     static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_21;
     static constexpr gpio_num_t PIN_SERIAL_CLOCK = GPIO_NUM_40;
@@ -140,15 +139,12 @@ struct Defaults {
   struct Touch : public SharedDefaults::Touch {
     static constexpr gpio_num_t PIN_INTERRUPT = GPIO_NUM_4;
   };
-  struct Display7Seg : public SharedDefaults::Display7Seg {};
   struct lvgl : public SharedDefaults::lvgl {
     static constexpr uint8_t TASK_CORE_ID = 1;
   };
   struct Buzzer : public SharedDefaults::Buzzer {
     static constexpr gpio_num_t PIN_PWM = GPIO_NUM_13;
   };
-  struct IndicatorLed : public SharedDefaults::IndicatorLed {};
-  struct SdCard : public SharedDefaults::SdCard {};
   struct Audio : public SharedDefaults::Audio {
     static constexpr gpio_num_t PIN_AMP_ENABLE = GPIO_NUM_15;
 
@@ -161,8 +157,7 @@ struct Defaults {
 };  // Defaults
 #endif
 #if CONFIG_IDF_TARGET_ESP32C6
-struct Defaults {
-  struct System : public SharedDefaults::System {};
+struct Defaults : public SharedDefaults {
   struct SpiBus : public SharedDefaults::SpiBus {
     static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_14;
     static constexpr gpio_num_t PIN_SERIAL_CLOCK = GPIO_NUM_7;
@@ -181,12 +176,6 @@ struct Defaults {
     static constexpr gpio_num_t PIN_RESET = GPIO_NUM_21;
     static constexpr gpio_num_t PIN_BACKLIGHT_PWM = GPIO_NUM_22;
   };
-  struct Touch : public SharedDefaults::Touch {};
-  struct Display7Seg : public SharedDefaults::Display7Seg {};
-  struct lvgl : public SharedDefaults::lvgl {};
-  struct Buzzer : public SharedDefaults::Buzzer {
-    static constexpr gpio_num_t PIN_PWM = GPIO_NUM_13;
-  };
   struct IndicatorLed : public SharedDefaults::IndicatorLed {
     static constexpr gpio_num_t PIN_RGB = GPIO_NUM_8;
   };
@@ -196,7 +185,6 @@ struct Defaults {
     static constexpr gpio_num_t PIN_MOSI = GPIO_NUM_5;
     static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_4;
   };
-  struct Audio : public SharedDefaults::Audio {};
 };  // Defaults
 #endif
 }  // namespace halpp::detail
