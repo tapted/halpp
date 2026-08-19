@@ -9,7 +9,6 @@
 
 #include <algorithm>
 #include <driver/ledc.h>
-
 #include <hal/ledc_ll.h>
 
 namespace HAL {
@@ -108,20 +107,26 @@ void Passive::set_hardware_note(uint32_t frequency, float volume) {
     pwm_channel_.stop();
     return;
   }
-#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
+#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32C6
   constexpr uint32_t rc_fast_clock_hz = 17500000;  // ~17.5 MHz
 #else
   constexpr uint32_t rc_fast_clock_hz = 8500000;
 #endif
   uint32_t source_clock_hz = 0;
-  if (config_.clk_cfg == LEDC_USE_RC_FAST_CLK) {
-    source_clock_hz = rc_fast_clock_hz;
-  } else if (config_.clk_cfg == LEDC_USE_APB_CLK) {
-    source_clock_hz = 80000000;  // 80 MHz
-  } else if (config_.clk_cfg == LEDC_USE_XTAL_CLK) {
-    source_clock_hz = 40000000;  // XTAL is 40 MHz
-  } else {
-    source_clock_hz = rc_fast_clock_hz;  // possibly LEDC_AUTO_CLK - be conservative
+  switch (config_.clk_cfg) {
+    case LEDC_USE_RC_FAST_CLK:
+      source_clock_hz = rc_fast_clock_hz;
+      break;
+#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
+    case LEDC_USE_APB_CLK:
+      source_clock_hz = 80000000;  // 80 MHz
+      break;
+#endif
+    case LEDC_USE_XTAL_CLK:
+      source_clock_hz = 40000000;  // XTAL is 40 MHz
+      break;
+    default:
+      source_clock_hz = rc_fast_clock_hz;  // possibly LEDC_AUTO_CLK - - be conservative
   }
 
   // Dynamically calculate the absolute hardware ceiling

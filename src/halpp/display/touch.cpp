@@ -1,3 +1,4 @@
+#if __has_include(<esp_lcd_touch.h>)
 #include "halpp/display/touch.hpp"
 
 #include <cstring>
@@ -163,3 +164,7 @@ IRAM_ATTR void Touch::internal_isr_cb(esp_lcd_touch_handle_t tp) {
   }
 }
 }  // namespace halpp::display
+
+#else
+#pragma message("Install espressif/esp_lcd_touch to use Touch module")
+#endif

@@ -1,3 +1,4 @@
+#if __has_include(<led_strip_types.h>)
 #include "halpp/led_strip/led_strip.hpp"
 
 #include <led_strip.h>
@@ -72,7 +73,7 @@ EspResult<> LedStrip::set_pixel(uint32_t index, uint32_t r, uint32_t g, uint32_t
 }
 
 EspResult<> LedStrip::set_pixel_rgbw(uint32_t index, uint32_t r, uint32_t g, uint32_t b,
-                                         uint32_t w) {
+                                     uint32_t w) {
   if (!handle_) return ESP_ERR_INVALID_STATE;
   return led_strip_set_pixel_rgbw(handle_, index, r, g, b, w);
 }
@@ -82,8 +83,7 @@ EspResult<> LedStrip::set_pixel_hsv(uint32_t index, uint16_t hue, uint8_t sat, u
   return led_strip_set_pixel_hsv(handle_, index, hue, sat, val);
 }
 
-EspResult<> LedStrip::set_pixel_hsv_16(uint32_t index, uint16_t hue, uint16_t sat,
-                                           uint16_t val) {
+EspResult<> LedStrip::set_pixel_hsv_16(uint32_t index, uint16_t hue, uint16_t sat, uint16_t val) {
   if (!handle_) return ESP_ERR_INVALID_STATE;
   return led_strip_set_pixel_hsv_16(handle_, index, hue, sat, val);
 }
@@ -99,3 +99,7 @@ EspResult<> LedStrip::clear() {
 }
 
 }  // namespace HAL
+
+#else
+#pragma message("Install espressif/led_strip to use LedStrip module")
+#endif
