@@ -9,7 +9,7 @@
 
 #include "halpp/display/display.hpp"
 
-namespace HAL {
+namespace halpp {
 
 class Ssd1306 : public Display {
  public:
@@ -45,4 +45,4 @@ class Ssd1306 : public Display {
   size_t tx_buffer_size_ = 0;
 };
 
-}  // namespace HAL
+}  // namespace halpp

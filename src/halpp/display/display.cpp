@@ -28,7 +28,7 @@ static std::optional<uint32_t> lvgl_step_function(YieldingTask<int>&) {
   return delay_ms;
 }
 
-namespace HAL {
+namespace halpp {
 
 constinit Display::DisplayLock Display::mutex;
 
@@ -268,4 +268,4 @@ EspResult<void> Display::draw_indexed_bitmap(int x_start, int y_start, int width
 void Display::on_lvgl_init(lv_display_t*) {
 }
 
-}  // namespace HAL
+}  // namespace halpp

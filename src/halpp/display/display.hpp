@@ -14,7 +14,7 @@
 struct _lv_display_t;
 typedef struct _lv_display_t lv_display_t;
 
-namespace HAL {
+namespace halpp {
 
 class Display {
  private:
@@ -96,4 +96,4 @@ class Display {
   Display& operator=(Display&& other) = delete;
 };
 
-}  // namespace HAL
+}  // namespace halpp

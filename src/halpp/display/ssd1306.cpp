@@ -5,13 +5,14 @@
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_ssd1306.h>
+#include <esp_lcd_panel_st7789.h>
 #include <esp_log.h>
 #include <lvgl.h>
 
 #include "halpp/display/boot_logo.hpp"
 #include "halpp/i2c/i2c_master.hpp"
 
-namespace HAL {
+namespace halpp {
 
 static const char* TAG = "Ssd1306";
 
@@ -166,4 +167,4 @@ void Ssd1306::on_lvgl_init(lv_display_t* disp) {
       LV_EVENT_INVALIDATE_AREA, nullptr);
 }
 
-}  // namespace HAL
+}  // namespace halpp

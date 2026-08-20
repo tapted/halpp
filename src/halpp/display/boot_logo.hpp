@@ -10,8 +10,7 @@
 
 #include "halpp/config.hpp"
 
-
-namespace HAL::Assets {
+namespace halpp::Assets {
 
 /**
  * @brief Generates a SSD1306-formatted bitmap of a tech/radar spinner.
@@ -74,4 +73,4 @@ constexpr std::array<uint8_t, (Width * Height) / 8> generate_boot_logo() {
 
 constexpr auto BOOT_LOGO = generate_boot_logo<128, 64>();
 
-}  // namespace HAL::Assets
+}  // namespace halpp::Assets
