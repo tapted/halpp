@@ -46,6 +46,8 @@ struct SharedDefaults {
   };
   struct Display {
     static constexpr gpio_num_t PIN_TEARING_EFFECT = GPIO_NUM_NC;  // Tearing Effect (TE)
+    static constexpr gpio_num_t PIN_DATA_COMMAND = GPIO_NUM_NC;    // Data/Command (DC)
+    static constexpr gpio_num_t PIN_RESET = GPIO_NUM_NC;           // Reset (RST)
     static constexpr gpio_num_t PIN_BACKLIGHT_PWM = GPIO_NUM_NC;   // Backlight PWM control
 
     static constexpr uint8_t BITS_PER_PIXEL = 16;
