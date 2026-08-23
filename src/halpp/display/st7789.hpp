@@ -3,8 +3,8 @@
 #include <hal/spi_types.h>
 #include <optional>
 
+#include "halpp/display/backlight.hpp"
 #include "halpp/display/display.hpp"
-#include "halpp/config.hpp"
 
 namespace halpp {
 
@@ -19,11 +19,14 @@ class St7789 : public Display {
   }
 
   // Initializes the SPI IO and links it to the Display base class
-  static EspResult<void> init_default_spi(spi_host_device_t spi_host = config::SpiBus::SPI_HOST);
+  static EspResult<void> init_default_spi();
   static EspResult<void> deinit_default() { return default_instance().reset(); }
 
   // Initializes the ST7789 panel hardware
   EspResult<void> begin();
+
+ private:
+  halpp::display::Backlight backlight_;
 };
 
 }  // namespace halpp

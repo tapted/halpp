@@ -49,6 +49,7 @@ class Display {
   EspResult<void> reset();
   EspResult<void> set_display_state(bool on);
   EspResult<void> invert(bool inverted);
+  EspResult<void> mirror(bool mirror_x, bool mirror_y);
   EspResult<void> swap_xy(bool swap);
 
   // Fills a rectangle safely using a fixed-size DMA chunking buffer
@@ -67,6 +68,9 @@ class Display {
   // Optional hook for subclasses to inject hardware-specific LVGL events (like coordinate rounding)
   virtual void on_lvgl_init(lv_display_t* disp);
 
+  static bool on_color_trans_done(esp_lcd_panel_io_handle_t panel_io,
+                                  esp_lcd_panel_io_event_data_t* edata, void* user_ctx);
+
  protected:
   constexpr Display() = default;
   explicit Display(Config config) : config_(config) {}
@@ -74,9 +78,6 @@ class Display {
   Config config_;
   esp_lcd_panel_handle_t panel_handle_ = nullptr;
   lv_display_t* lv_display_ = nullptr;
-
-  static bool on_color_trans_done(esp_lcd_panel_io_handle_t panel_io,
-                                  esp_lcd_panel_io_event_data_t* edata, void* user_ctx);
 
  private:
   // Locks an internal mutex and notifies LVGL to redraw on unlock.

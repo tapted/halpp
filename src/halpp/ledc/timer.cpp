@@ -35,7 +35,7 @@ EspResult<Channel> Timer::add_channel(ledc_channel_t channel, gpio_num_t gpio_nu
       .timer_sel = timer_,  // Automatically bound to THIS timer
       .duty = 0,
       .hpoint = 0,
-      .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+      .sleep_mode = LEDC_SLEEP_MODE_KEEP_ALIVE, // LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
       .flags = {},
       .deconfigure = false,
   };

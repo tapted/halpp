@@ -53,12 +53,17 @@ struct SharedDefaults {
     static constexpr uint8_t BITS_PER_PIXEL = 16;
     static constexpr bool INVERT_COLORS = false;  // Invert colors (e.g. for OLEDs - white on black)
     static constexpr bool SWAP_XY = false;        // Swap X/Y for portrait vs landscape
+    static constexpr bool MIRROR_X = false;       // Mirror X axis (horizontal flip)
+    static constexpr bool MIRROR_Y = false;       // Mirror Y axis (vertical flip)
 
+    enum class ClockSource { AUTO, PLL, RTC, XTAL };
+    static constexpr ClockSource BACKLIGHT_CLOCK_SOURCE = ClockSource::RTC;
     static constexpr ledc_channel_t BACKLIGHT_LEDC_CHANNEL = LEDC_CHANNEL_0;
     static constexpr ledc_timer_t BACKLIGHT_LEDC_TIMER = LEDC_TIMER_0;
-    static constexpr uint32_t BACKLIGHT_LEDC_FREQ = 5000;
-    static constexpr ledc_timer_bit_t BACKLIGHT_LEDC_RESOLUTION = LEDC_TIMER_13_BIT;
-    static constexpr uint8_t BACKLIGHT_MAX = 100;  // Max backlight level (0-100)
+    static constexpr uint32_t BACKLIGHT_LEDC_FREQ = 3000;
+    static constexpr ledc_timer_bit_t BACKLIGHT_LEDC_RESOLUTION = LEDC_TIMER_12_BIT;
+    static constexpr uint8_t BACKLIGHT_DEFAULT = 30;  // Backlight level set on boot
+    static constexpr uint8_t BACKLIGHT_MAX = 100;     // Max backlight level (0-100)
   };
   struct Touch {
     static constexpr uint8_t I2C_ADDRESS = 0x15;              // Default I2C address for CST816S
@@ -163,6 +168,7 @@ struct Defaults : public SharedDefaults {
   struct SpiBus : public SharedDefaults::SpiBus {
     static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_14;
     static constexpr gpio_num_t PIN_SERIAL_CLOCK = GPIO_NUM_7;
+    static constexpr gpio_num_t PIN_MISO = GPIO_NUM_5;  // Shared with SdCard
     static constexpr gpio_num_t PIN_MOSI = GPIO_NUM_6;
   };
   struct Usb : public SharedDefaults::Usb {

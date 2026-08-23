@@ -10,13 +10,29 @@ static constexpr const char TAG[] = "BACKLIGHT";
 
 namespace halpp::display {
 
+static ledc_clk_cfg_t get_ledc_clk_cfg(config::Display::ClockSource clock_source) {
+  switch (clock_source) {
+    case config::Display::ClockSource::AUTO:
+      return LEDC_AUTO_CLK;
+    case config::Display::ClockSource::PLL:
+      return LEDC_USE_PLL_DIV_CLK;
+    case config::Display::ClockSource::RTC:
+      return LEDC_USE_RC_FAST_CLK;
+    case config::Display::ClockSource::XTAL:
+      return LEDC_USE_XTAL_CLK;
+  }
+  return LEDC_AUTO_CLK;
+}
+
 EspResult<> Backlight::begin() {
   ESP_LOGI(TAG, "Initializing backlight...");
 
   EspResult<HAL::Timer> timer_res =
-      HAL::Timer::configure(config::Display::BACKLIGHT_LEDC_TIMER, LEDC_AUTO_CLK,
-                            config::Display::BACKLIGHT_LEDC_RESOLUTION,
-                            config::Display::BACKLIGHT_LEDC_FREQ, LEDC_LOW_SPEED_MODE);
+      HAL::Timer::configure(config::Display::BACKLIGHT_LEDC_TIMER,                      //
+                            get_ledc_clk_cfg(config::Display::BACKLIGHT_CLOCK_SOURCE),  //
+                            config::Display::BACKLIGHT_LEDC_RESOLUTION,                 //
+                            config::Display::BACKLIGHT_LEDC_FREQ,                       //
+                            LEDC_LOW_SPEED_MODE);
   if (!timer_res) return timer_res.strip().log_error(TAG, "Failed to configure backlight timer");
 
   EspResult<HAL::Channel> chan_res = timer_res->add_channel(config::Display::BACKLIGHT_LEDC_CHANNEL,

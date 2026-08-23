@@ -195,6 +195,11 @@ EspResult<void> Display::invert(bool inverted) {
   return esp_lcd_panel_invert_color(panel_handle_, inverted);
 }
 
+EspResult<void> Display::mirror(bool mirror_x, bool mirror_y) {
+  if (!panel_handle_) return ESP_ERR_INVALID_STATE;
+  return esp_lcd_panel_mirror(panel_handle_, mirror_x, mirror_y);
+}
+
 EspResult<void> Display::swap_xy(bool swap) {
   if (!panel_handle_) return ESP_ERR_INVALID_STATE;
   return esp_lcd_panel_swap_xy(panel_handle_, swap);
