@@ -75,9 +75,11 @@ struct SharedDefaults {
   struct lvgl {
     static constexpr bool DOUBLE_BUFFERED = true;   // Use two buffers for LVGL rendering
     static constexpr uint32_t BUFFER_FRACTION = 1;  // Buffer size = screen_pixels / buffer_fraction
-    static constexpr uint32_t TASK_STACK_SIZE = 8192;  // LVGL task stack size
-    static constexpr uint32_t TASK_PRIORITY = 5;       // LVGL task priority
-    static constexpr uint8_t TASK_CORE_ID = 0;         // LVGL task core affinity
+
+    static constexpr bool USE_MAIN_LOOP = true;  // Use espbase main_loop, not a freertos task.
+    static constexpr uint32_t TASK_STACK_SIZE = 8192;  // LVGL freertos task stack size
+    static constexpr uint32_t TASK_PRIORITY = 5;       // LVGL freertos task priority
+    static constexpr uint8_t TASK_CORE_ID = 0;         // LVGL freertos task core affinity
   };
   struct Buzzer {
     static constexpr gpio_num_t PIN_PWM = GPIO_NUM_NC;  // PWM output for passive buzzer

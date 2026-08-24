@@ -9,6 +9,7 @@
 #include <lvgl.h>
 #include <mutex>
 
+#include "espbase/main_loop_task.hpp"
 #include "espbase/yielding_task.hpp"
 #include "halpp/config.hpp"
 
@@ -19,10 +20,28 @@ using LVGLConfig = halpp::config::lvgl;
 // LVGL is global, so no point putting these on the Display instance. They are shared across all
 // displays.
 static std::mutex lvgl_mutex;
-static constinit YieldingTask<int> lvgl_task;
 
-static std::optional<uint32_t> lvgl_step_function(YieldingTask<int>&) {
-  std::lock_guard<std::mutex> lock(lvgl_mutex);
+using LVGLTaskType = std::conditional_t<  //
+    LVGLConfig::USE_MAIN_LOOP,            //
+    MainLoopTask<int>,                    //
+    YieldingTask<int> >;
+
+static constinit LVGLTaskType lvgl_task;
+static constinit auto lvgl_task_config = []() {
+  if constexpr (LVGLConfig::USE_MAIN_LOOP) {
+    return MainLoopTaskConfig{.name = "lvgl_task"};
+  } else {
+    return TaskConfig{
+        .name = "lvgl_task",
+        .stack_size = LVGLConfig::TASK_STACK_SIZE,
+        .priority = LVGLConfig::TASK_PRIORITY,
+        .core_id = LVGLConfig::TASK_CORE_ID,
+    };
+  }
+}();
+
+static std::optional<uint32_t> lvgl_step_function(LVGLTaskType&) {
+  std::lock_guard lock(lvgl_mutex);
   uint32_t delay_ms = lv_timer_handler();
   if (delay_ms == LV_NO_TIMER_READY) return std::nullopt;
   return delay_ms;
@@ -158,13 +177,7 @@ EspResult<void> Display::init_lvgl() {
 
   ESP_LOGI(TAG, "LVGL 9 Display initialized (Buffer: %zu bytes)", buffer_bytes);
 
-  lvgl_task.start(
-      {
-          .stack_size = halpp::config::lvgl::TASK_STACK_SIZE,
-          .priority = halpp::config::lvgl::TASK_PRIORITY,
-          .core_id = halpp::config::lvgl::TASK_CORE_ID,
-      },
-      0, lvgl_step_function);
+  lvgl_task.start(lvgl_task_config, nullptr, lvgl_step_function);
   return ESP_OK;
 }
 
