@@ -25,6 +25,15 @@ class St7789 : public Display {
   // Initializes the ST7789 panel hardware
   EspResult<void> begin();
 
+  void set_backlight(bool on, uint8_t brightness) {
+    if (on) {
+      backlight_.begin();
+      backlight_.set_level(brightness);
+    } else {
+      backlight_.reset();
+    }
+  }
+
  private:
   halpp::display::Backlight backlight_;
 };

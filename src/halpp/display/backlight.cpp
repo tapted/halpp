@@ -25,6 +25,9 @@ static ledc_clk_cfg_t get_ledc_clk_cfg(config::Display::ClockSource clock_source
 }
 
 EspResult<> Backlight::begin() {
+  if (channel_) {
+    return ESP_OK;  // Already initialized
+  }
   ESP_LOGI(TAG, "Initializing backlight...");
 
   EspResult<HAL::Timer> timer_res =

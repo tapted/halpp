@@ -34,6 +34,7 @@ class LedStrip {
   static LedStrip& default_instance() { return *default_optional(); }
   static EspResult<> init_default(const RmtConfig& config);
   static void deinit_default() { default_optional().reset(); }
+  static bool is_default_initialized() { return default_optional().has_value(); }
 
   LedStrip(const LedStrip&) = delete;
   LedStrip& operator=(const LedStrip&) = delete;
