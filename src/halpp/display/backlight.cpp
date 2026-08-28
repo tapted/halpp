@@ -15,7 +15,11 @@ static ledc_clk_cfg_t get_ledc_clk_cfg(config::Display::ClockSource clock_source
     case config::Display::ClockSource::AUTO:
       return LEDC_AUTO_CLK;
     case config::Display::ClockSource::PLL:
+#if CONFIG_IDF_TARGET_ESP32C6
       return LEDC_USE_PLL_DIV_CLK;
+#else
+      return LEDC_AUTO_CLK;
+#endif
     case config::Display::ClockSource::RTC:
       return LEDC_USE_RC_FAST_CLK;
     case config::Display::ClockSource::XTAL:

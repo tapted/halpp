@@ -21,6 +21,7 @@ struct SharedDefaults {
 
     // Serial Interface Data
     static constexpr gpio_num_t PIN_MOSI = GPIO_NUM_NC;  // Master Out Slave In (MOSI)
+    static constexpr gpio_num_t PIN_MISO = GPIO_NUM_NC;  // Master In Slave Out (MISO)
 
     // QSPI Data Lanes
     static constexpr gpio_num_t PIN_QSPI_SDA_0 = GPIO_NUM_NC;
@@ -56,7 +57,7 @@ struct SharedDefaults {
     static constexpr bool MIRROR_X = false;       // Mirror X axis (horizontal flip)
     static constexpr bool MIRROR_Y = false;       // Mirror Y axis (vertical flip)
 
-    enum class ClockSource { AUTO, PLL, RTC, XTAL };
+    enum class ClockSource { AUTO, PLL /* c6 only */, RTC, XTAL };
     static constexpr ClockSource BACKLIGHT_CLOCK_SOURCE = ClockSource::RTC;
     static constexpr ledc_channel_t BACKLIGHT_LEDC_CHANNEL = LEDC_CHANNEL_0;
     static constexpr ledc_timer_t BACKLIGHT_LEDC_TIMER = LEDC_TIMER_0;
