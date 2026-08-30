@@ -2,10 +2,16 @@
 
 #include <cstdint>
 #include <driver/i2s_types.h>
+#include <esp_lcd_panel_dev.h>
+#include <esp_lcd_types.h>
 #include <hal/i2s_types.h>
 #include <hal/ledc_types.h>
 #include <hal/spi_types.h>
 #include <soc/gpio_num.h>
+
+typedef esp_err_t (*lcd_new_panel_t)(const esp_lcd_panel_io_handle_t io,
+                                     const esp_lcd_panel_dev_config_t* panel_dev_config,
+                                     esp_lcd_panel_handle_t* ret_panel);
 
 namespace halpp::detail {
 struct SharedDefaults {
@@ -52,6 +58,13 @@ struct SharedDefaults {
     static constexpr gpio_num_t PIN_BACKLIGHT_PWM = GPIO_NUM_NC;   // Backlight PWM control
 
     static constexpr uint8_t BITS_PER_PIXEL = 16;
+    static constexpr lcd_rgb_element_order_t RGB_ELEMENT_ORDER = LCD_RGB_ELEMENT_ORDER_RGB;
+    static constexpr lcd_rgb_data_endian_t DATA_ENDIAN = LCD_RGB_DATA_ENDIAN_BIG;
+    static constexpr lcd_new_panel_t NEW_PANEL_FUNC = nullptr;  // E.g., esp_lcd_new_panel_st7789.
+    static constexpr void* VENDOR_CONFIG = nullptr;  // Vendor-specific configuration, if needed
+
+    // Skip hardware reset during initialization (e.g., if reset is done via EXIO, not GPIO).
+    static constexpr bool SKIP_RESET = false;
     static constexpr bool INVERT_COLORS = false;  // Invert colors (e.g. for OLEDs - white on black)
     static constexpr bool SWAP_XY = false;        // Swap X/Y for portrait vs landscape
     static constexpr bool MIRROR_X = false;       // Mirror X axis (horizontal flip)
