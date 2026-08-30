@@ -6,6 +6,7 @@
 #include <esp_log.h>
 
 #include "halpp/config.hpp"
+#include "halpp/display/boot_logo.hpp"
 #include "halpp/display/spi_init.hpp"
 
 namespace halpp {
@@ -29,7 +30,7 @@ EspResult<void> St7789::begin() {
 
   esp_lcd_panel_dev_config_t panel_config = {
       .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,  // Replaces LCD_RGB_ENDIAN_BGR
-      .data_endian = LCD_RGB_DATA_ENDIAN_LITTLE,      // Standard for 16-bit SPI
+      .data_endian = LCD_RGB_DATA_ENDIAN_LITTLE,   // Standard for 16-bit SPI
       .bits_per_pixel = config::Display::BITS_PER_PIXEL,
       .reset_gpio_num = config::Display::PIN_RESET,
       .vendor_config = nullptr,
@@ -59,7 +60,22 @@ EspResult<void> St7789::begin() {
 
   if (EspError err = esp_lcd_panel_disp_on_off(panel_handle_, true)) return err;
 
-  clear();  // TODO: boot logo
+  // Calculate dynamic centering for any display resolution
+  const uint16_t logo_size = halpp::Assets::COLOR_LOGO_SIZE;
+  const uint16_t x_off = (config_.width - logo_size) / 2;
+  const uint16_t y_off = (config_.height - logo_size) / 2;
+
+  // Match the deep space background color from the asset generator
+  const uint32_t bg_color = halpp::Assets::COLOR_LOGO_BG_COLOR;
+
+  // Frame the negative space around the logo (top, bottom, left, right)
+  fill_rect(0, 0, config_.width, y_off, bg_color);
+  fill_rect(0, y_off + logo_size, config_.width, config_.height - y_off - logo_size, bg_color);
+  fill_rect(0, y_off, x_off, logo_size, bg_color);
+  fill_rect(x_off + logo_size, y_off, config_.width - x_off - logo_size, logo_size, bg_color);
+
+  // Draw the compile-time color logo perfectly in the center
+  draw_bitmap(x_off, y_off, logo_size, logo_size, halpp::Assets::COLOR_LOGO.data());
 
   if (EspError err = backlight_.begin()) {
     return err.log(TAG, "Failed to initialize backlight");

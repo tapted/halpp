@@ -70,7 +70,46 @@ constexpr std::array<uint8_t, (Width * Height) / 8> generate_boot_logo() {
   }
   return buffer;
 }
+constexpr uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
+  return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+}
+
+template <uint16_t Size = 128>
+constexpr std::array<uint16_t, Size * Size> generate_color_logo() {
+  std::array<uint16_t, Size * Size> buffer = {0};
+  const int center = Size / 2;
+
+  for (int y = 0; y < Size; ++y) {
+    for (int x = 0; x < Size; ++x) {
+      int dx = x - center;
+      int dy = y - center;
+      int r2 = dx * dx + dy * dy;
+      bool draw = false;
+
+      if (r2 >= 45 * 45 && r2 <= 52 * 52 && !(dx > 0 && dy < 0)) draw = true;
+      if (r2 >= 25 * 25 && r2 <= 32 * 32 && !(dx < 0 && dy > 0)) draw = true;
+      if (r2 <= 10 * 10) draw = true;
+
+      if (draw) {
+        uint8_t r = (x * 255) / Size;
+        uint8_t b = (y * 255) / Size;
+        uint8_t g = 255 - ((r + b) / 2);
+
+        // Output native Little Endian color
+        buffer[y * Size + x] = rgb565(r, g, b);
+      } else {
+        // Deep space background
+        buffer[y * Size + x] = rgb565(5, 5, 15);
+      }
+    }
+  }
+  return buffer;
+}
 
 constexpr auto BOOT_LOGO = generate_boot_logo<128, 64>();
+
+constexpr uint16_t COLOR_LOGO_SIZE = 128;
+constexpr uint16_t COLOR_LOGO_BG_COLOR = rgb565(5, 5, 15);
+constexpr auto COLOR_LOGO = generate_color_logo<COLOR_LOGO_SIZE>();
 
 }  // namespace halpp::Assets
