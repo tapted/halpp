@@ -116,7 +116,11 @@ EspResult<void> Display::init_lvgl() {
     // Perfect for SSD1306! Tells LVGL to pack pixels into 1-bit boundaries.
     lv_display_set_color_format(lv_display_, LV_COLOR_FORMAT_I1);
   } else if (config_.bits_per_pixel == 16) {
-    lv_display_set_color_format(lv_display_, LV_COLOR_FORMAT_RGB565);
+    if (config::lvgl::USE_RGB565_SWAPPED) {
+      lv_display_set_color_format(lv_display_, LV_COLOR_FORMAT_RGB565_SWAPPED);
+    } else {
+      lv_display_set_color_format(lv_display_, LV_COLOR_FORMAT_RGB565);
+    }
   } else {
     ESP_LOGW(TAG, "Unsupported BPP for LVGL auto-config");
   }

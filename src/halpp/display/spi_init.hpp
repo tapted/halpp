@@ -11,6 +11,7 @@ namespace halpp {
 
 template <typename T = void>
 EspResult<Display::Config> init_spi_display(Display* instance) {
+  esp_lcd_panel_io_spi_config_t::esp_lcd_spi_flags_t flags = {};
   spi_bus_config_t bus_config = {};
   bus_config.sclk_io_num = config::SpiBus::PIN_SERIAL_CLOCK;
   bus_config.max_transfer_sz = 0;  // Use default max transfer size (4092 bytes for DMA)
@@ -21,6 +22,7 @@ EspResult<Display::Config> init_spi_display(Display* instance) {
     bus_config.data1_io_num = config::SpiBus::PIN_QSPI_SDA_1;
     bus_config.data2_io_num = config::SpiBus::PIN_QSPI_SDA_2;
     bus_config.data3_io_num = config::SpiBus::PIN_QSPI_SDA_3;
+    flags.quad_mode = 1;  // QSPI mode
   } else if constexpr (config::SpiBus::PIN_MOSI != GPIO_NUM_NC) {
     bus_config.mosi_io_num = config::SpiBus::PIN_MOSI;
     bus_config.miso_io_num = config::SpiBus::PIN_MISO;
@@ -46,11 +48,11 @@ EspResult<Display::Config> init_spi_display(Display* instance) {
       .trans_queue_depth = 10,
       .on_color_trans_done = Display::on_color_trans_done,
       .user_ctx = instance,
-      .lcd_cmd_bits = 8,
-      .lcd_param_bits = 8,
+      .lcd_cmd_bits = config::Display::SPI_COMMAND_BITS,
+      .lcd_param_bits = config::Display::SPI_PARAM_BITS,
       .cs_ena_pretrans = 0,
       .cs_ena_posttrans = 0,
-      .flags = {},
+      .flags = flags,
   };
 
   esp_lcd_panel_io_handle_t io_handle = nullptr;

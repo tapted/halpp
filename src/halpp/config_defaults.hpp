@@ -9,11 +9,17 @@
 #include <hal/spi_types.h>
 #include <soc/gpio_num.h>
 
-typedef esp_err_t (*lcd_new_panel_t)(const esp_lcd_panel_io_handle_t io,
-                                     const esp_lcd_panel_dev_config_t* panel_dev_config,
-                                     esp_lcd_panel_handle_t* ret_panel);
+namespace halpp {
+class Display;
+}
 
 namespace halpp::detail {
+
+esp_err_t not_supported_new_panel_func(const esp_lcd_panel_io_handle_t io,
+                                       const esp_lcd_panel_dev_config_t* panel_dev_config,
+                                       esp_lcd_panel_handle_t* ret_panel);
+void draw_default_boot_logo(halpp::Display& display);
+
 struct SharedDefaults {
   struct System {
     static constexpr gpio_num_t PIN_BOOT = GPIO_NUM_0;  // Boot mode control strapping pin
@@ -57,10 +63,14 @@ struct SharedDefaults {
     static constexpr gpio_num_t PIN_RESET = GPIO_NUM_NC;           // Reset (RST)
     static constexpr gpio_num_t PIN_BACKLIGHT_PWM = GPIO_NUM_NC;   // Backlight PWM control
 
+    static constexpr uint8_t SPI_COMMAND_BITS = 8;
+    static constexpr uint8_t SPI_PARAM_BITS = 8;
+
     static constexpr uint8_t BITS_PER_PIXEL = 16;
     static constexpr lcd_rgb_element_order_t RGB_ELEMENT_ORDER = LCD_RGB_ELEMENT_ORDER_RGB;
     static constexpr lcd_rgb_data_endian_t DATA_ENDIAN = LCD_RGB_DATA_ENDIAN_BIG;
-    static constexpr lcd_new_panel_t NEW_PANEL_FUNC = nullptr;  // E.g., esp_lcd_new_panel_st7789.
+    static constexpr auto NEW_PANEL_FUNC = not_supported_new_panel_func;
+    static constexpr auto BOOT_LOGO_FUNC = draw_default_boot_logo;
     static constexpr void* VENDOR_CONFIG = nullptr;  // Vendor-specific configuration, if needed
 
     // Skip hardware reset during initialization (e.g., if reset is done via EXIO, not GPIO).
@@ -69,6 +79,8 @@ struct SharedDefaults {
     static constexpr bool SWAP_XY = false;        // Swap X/Y for portrait vs landscape
     static constexpr bool MIRROR_X = false;       // Mirror X axis (horizontal flip)
     static constexpr bool MIRROR_Y = false;       // Mirror Y axis (vertical flip)
+    static constexpr uint16_t X_GAP = 0;          // Horizontal gap (offset)
+    static constexpr uint16_t Y_GAP = 0;          // Vertical gap (offset)
 
     enum class ClockSource { AUTO, PLL /* c6 only */, RTC, XTAL };
     static constexpr ClockSource BACKLIGHT_CLOCK_SOURCE = ClockSource::RTC;
@@ -91,6 +103,7 @@ struct SharedDefaults {
     static constexpr uint32_t BUFFER_FRACTION = 1;  // Buffer size = screen_pixels / buffer_fraction
 
     static constexpr bool USE_MAIN_LOOP = true;  // Use espbase main_loop, not a freertos task.
+    static constexpr bool USE_RGB565_SWAPPED = false;  // LV_COLOR_FORMAT_RGB565_SWAPPED for 16bit
     static constexpr uint32_t TASK_STACK_SIZE = 8192;  // LVGL freertos task stack size
     static constexpr uint32_t TASK_PRIORITY = 5;       // LVGL freertos task priority
     static constexpr uint8_t TASK_CORE_ID = 0;         // LVGL freertos task core affinity

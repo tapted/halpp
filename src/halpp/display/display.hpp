@@ -41,6 +41,7 @@ class Display {
 
   EspResult<void> init_lvgl();
   lv_display_t* get_lv_display() const { return lv_display_; }
+  esp_lcd_panel_io_handle_t get_io_handle() const { return config_.io_handle; }
 
   uint16_t width() const { return config_.width; }
   uint16_t height() const { return config_.height; }
