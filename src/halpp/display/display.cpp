@@ -19,7 +19,7 @@ using LVGLConfig = halpp::config::lvgl;
 
 // LVGL is global, so no point putting these on the Display instance. They are shared across all
 // displays.
-static std::mutex lvgl_mutex;
+static std::recursive_mutex lvgl_mutex;
 
 using LVGLTaskType = std::conditional_t<  //
     LVGLConfig::USE_MAIN_LOOP,            //
@@ -40,8 +40,11 @@ static constinit auto lvgl_task_config = []() {
   }
 }();
 
+static void (*on_screen_timer_tick)() = nullptr;
 static std::optional<uint32_t> lvgl_step_function(LVGLTaskType&) {
   std::lock_guard lock(lvgl_mutex);
+
+  if (on_screen_timer_tick) on_screen_timer_tick();
   uint32_t delay_ms = lv_timer_handler();
   if (delay_ms == LV_NO_TIMER_READY) return std::nullopt;
   return delay_ms;
@@ -57,7 +60,11 @@ void Display::DisplayLock::lock() {
 
 void Display::DisplayLock::unlock() {
   lvgl_mutex.unlock();
-  lvgl_task.notify();  // Notify the LVGL task to run immediately after unlocking
+  Display::notify();  // Notify the LVGL task to run immediately after unlocking
+}
+
+void Display::notify() {
+  lvgl_task.notify();
 }
 
 // static
@@ -77,7 +84,8 @@ static uint32_t halpp_lvgl_tick_cb(void) {
 }
 
 // --- LVGL 9 Initialization ---
-EspResult<void> Display::init_lvgl() {
+EspResult<void> Display::init_lvgl(void (*on_screen_timer_tick_cb)()) {
+  ::on_screen_timer_tick = on_screen_timer_tick_cb;
   if (!is_initialized()) return ESP_ERR_INVALID_STATE;
   if (lv_display_) return ESP_OK;  // Already initialized
 

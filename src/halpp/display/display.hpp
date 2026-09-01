@@ -28,6 +28,8 @@ class Display {
   struct Guard {
     std::lock_guard<DisplayLock> lock{mutex};
   };
+  // Notifies the LVGL task to redraw.
+  static void notify();
 
   struct Config {
     uint16_t width = 0;
@@ -39,7 +41,7 @@ class Display {
 
   bool is_initialized() const { return panel_handle_ != nullptr; }
 
-  EspResult<void> init_lvgl();
+  EspResult<void> init_lvgl(void (*on_screen_timer_tick)() = nullptr);
   lv_display_t* get_lv_display() const { return lv_display_; }
   esp_lcd_panel_io_handle_t get_io_handle() const { return config_.io_handle; }
 

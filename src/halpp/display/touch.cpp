@@ -5,7 +5,9 @@
 #include <esp_log.h>
 #include <hal/gpio_types.h>
 
+#include "espbase/main_loop.hpp"
 #include "halpp/config.hpp"
+#include "halpp/display/display.hpp"
 #include "halpp/i2c/i2c_master.hpp"
 
 using halpp::config;
@@ -25,9 +27,9 @@ namespace halpp::display {
 Touch::~Touch() {
   reset();
 }
-EspResult<void> Touch::begin(TouchInitFn driver_init_fn, TaskHandle_t notify_on_touch_in_isr) {
+EspResult<void> Touch::begin(TouchInitFn driver_init_fn, void (*on_screen_touched)()) {
   if (touch_handle_ || lv_indev_) return ESP_OK;
-  task_to_notify_ = notify_on_touch_in_isr;
+  this->on_screen_touched = on_screen_touched;
 
   ESP_LOGI(TAG, "Initializing Touch Driver...");
 
@@ -102,12 +104,12 @@ void Touch::reset() {
   }
 }
 
-bool Touch::maybe_indev_read() {
+void Touch::maybe_indev_read() {
   if (lv_indev_ && (irq_fired_ || is_touching_)) {
+    halpp::Display::Guard lock;
     lv_indev_read(lv_indev_);
-    return true;
+    if (on_screen_touched) on_screen_touched();
   }
-  return false;
 }
 
 void Touch::lvgl_read_cb(lv_indev_t* indev, lv_indev_data_t* data) {
@@ -152,15 +154,10 @@ IRAM_ATTR void Touch::internal_isr_cb(esp_lcd_touch_handle_t tp) {
 
   // 1. Set the internal flag to open the LVGL read gate
   self->irq_fired_ = true;
-
-  // 2. Safely jolt the main app task awake if a handle was provided
-  if (self->task_to_notify_) {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    vTaskNotifyGiveFromISR(self->task_to_notify_, &xHigherPriorityTaskWoken);
-
-    if (xHigherPriorityTaskWoken == pdTRUE) {
-      portYIELD_FROM_ISR();
-    }
+  if constexpr (config::lvgl::USE_MAIN_LOOP) {
+    main_loop.push<&Touch::maybe_indev_read>(self);
+  } else {
+    if (self->on_screen_touched) self->on_screen_touched();
   }
 }
 }  // namespace halpp::display
