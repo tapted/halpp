@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_touch.h>
 #include <indev/lv_indev.h>
@@ -7,7 +8,7 @@
 
 #include "espbase/esp_result.hpp"
 
-typedef struct esp_lcd_panel_io_t *esp_lcd_panel_io_handle_t;
+typedef struct esp_lcd_panel_io_t* esp_lcd_panel_io_handle_t;
 
 namespace halpp::display {
 
@@ -25,8 +26,8 @@ class Touch {
   Touch& operator=(const Touch&) = delete;
 
   // Initializes the I2C IO, Touch Controller, and LVGL Input Device.
-  // `on_screen_touched` is called from the main loop when a touch event is detected OR if 
-  // config::lvgl::USE_MAIN_LOOP is false, it is called directly from the ISR context (without 
+  // `on_screen_touched` is called from the main loop when a touch event is detected OR if
+  // config::lvgl::USE_MAIN_LOOP is false, it is called directly from the ISR context (without
   // asking lvgl to read the input device).
   EspResult<> begin(TouchInitFn driver_init_fn, void (*on_screen_touched)());
   void reset();
@@ -44,6 +45,7 @@ class Touch {
   void (*on_screen_touched)() = nullptr;
 
   volatile bool irq_fired_ = false;
+  std::atomic<bool> task_pending_ = false;
   bool is_touching_ = false;
   bool is_enabled_ = true;
   bool ignore_until_release_ = false;  // Prevents phantom clicks when waking up

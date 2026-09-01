@@ -105,6 +105,7 @@ void Touch::reset() {
 }
 
 void Touch::maybe_indev_read() {
+  task_pending_.store(false, std::memory_order_release);
   if (lv_indev_ && (irq_fired_ || is_touching_)) {
     halpp::Display::Guard lock;
     lv_indev_read(lv_indev_);
@@ -155,6 +156,7 @@ IRAM_ATTR void Touch::internal_isr_cb(esp_lcd_touch_handle_t tp) {
   // 1. Set the internal flag to open the LVGL read gate
   self->irq_fired_ = true;
   if constexpr (config::lvgl::USE_MAIN_LOOP) {
+    if (self->task_pending_.exchange(true, std::memory_order_acq_rel)) return;  // Already scheduled
     main_loop.push<&Touch::maybe_indev_read>(self);
   } else {
     if (self->on_screen_touched) self->on_screen_touched();
