@@ -102,8 +102,10 @@ struct SharedDefaults {
     static constexpr bool DOUBLE_BUFFERED = true;   // Use two buffers for LVGL rendering
     static constexpr uint32_t BUFFER_FRACTION = 1;  // Buffer size = screen_pixels / buffer_fraction
 
+    // Emulates LV_COLOR_FORMAT_RGB565_SWAPPED when flushing the display by swapping bytes.
+    static constexpr bool USE_RGB565_SWAPPED = false;
+
     static constexpr bool USE_MAIN_LOOP = true;  // Use espbase main_loop, not a freertos task.
-    static constexpr bool USE_RGB565_SWAPPED = false;  // LV_COLOR_FORMAT_RGB565_SWAPPED for 16bit
     static constexpr uint32_t TASK_STACK_SIZE = 8192;  // LVGL freertos task stack size
     static constexpr uint32_t TASK_PRIORITY = 5;       // LVGL freertos task priority
     static constexpr uint8_t TASK_CORE_ID = 0;         // LVGL freertos task core affinity

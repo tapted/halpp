@@ -15,6 +15,34 @@
 
 static const char* TAG = "HAL::Display";
 
+inline static void custom_rgb565_swap(void* __restrict buf, uint32_t buf_size_px) {
+  uint16_t* __restrict buf16 = static_cast<uint16_t*>(buf);
+
+  // 1. Enforce 32-bit alignment to avoid hardware fetch penalties
+  if (reinterpret_cast<uintptr_t>(buf16) & 0x2) {
+    uint16_t val = buf16[0];
+    buf16[0] = (val >> 8) | (val << 8);
+    buf16++;
+    buf_size_px--;
+  }
+
+  uint32_t* __restrict buf32 = reinterpret_cast<uint32_t*>(buf16);
+  uint32_t u32_cnt = buf_size_px / 2;
+
+  // 2. A clean loop allows the compiler to perfectly pipeline the ALU operations
+  for (uint32_t i = 0; i < u32_cnt; ++i) {
+    uint32_t val = buf32[i];
+    buf32[i] = ((val & 0xff00ff00) >> 8) | ((val & 0x00ff00ff) << 8);
+  }
+
+  // 3. Catch the trailing odd pixel
+  if (buf_size_px & 0x1) {
+    uint32_t last_idx = buf_size_px - 1;
+    uint16_t val = buf16[last_idx];
+    buf16[last_idx] = (val >> 8) | (val << 8);
+  }
+}
+
 using LVGLConfig = halpp::config::lvgl;
 
 // LVGL is global, so no point putting these on the Display instance. They are shared across all
@@ -124,11 +152,9 @@ EspResult<void> Display::init_lvgl(void (*on_screen_timer_tick_cb)()) {
     // Perfect for SSD1306! Tells LVGL to pack pixels into 1-bit boundaries.
     lv_display_set_color_format(lv_display_, LV_COLOR_FORMAT_I1);
   } else if (config_.bits_per_pixel == 16) {
-    if (config::lvgl::USE_RGB565_SWAPPED) {
-      lv_display_set_color_format(lv_display_, LV_COLOR_FORMAT_RGB565_SWAPPED);
-    } else {
-      lv_display_set_color_format(lv_display_, LV_COLOR_FORMAT_RGB565);
-    }
+    // Don't set LV_COLOR_FORMAT_RGB565_SWAPPED here: lv_canvas is buggy with that format and
+    // lv_display_set_color_format advises to use lv_draw_sw_rgb565_swap in the flush_cb instead.
+    lv_display_set_color_format(lv_display_, LV_COLOR_FORMAT_RGB565);
   } else {
     ESP_LOGW(TAG, "Unsupported BPP for LVGL auto-config");
   }
@@ -174,6 +200,10 @@ EspResult<void> Display::init_lvgl(void (*on_screen_timer_tick_cb)()) {
           const uint8_t* pixels = px_map + palette_bytes;  // Cleanly advance past the header
           res = display->draw_indexed_bitmap(area->x1, area->y1, w, h, pixels, palette, lv_stride);
         } else {
+          if constexpr (config::lvgl::USE_RGB565_SWAPPED) {
+            uint32_t px_count = lv_area_get_width(area) * lv_area_get_height(area);
+            custom_rgb565_swap(px_map, px_count);
+          }
           res = display->draw_bitmap(area->x1, area->y1, w, h, px_map, lv_stride);
         }
         if (!res) {
