@@ -30,9 +30,11 @@ static EspTimer hibernate_timer;
 static uint32_t current_timeout_ms{20000};
 static uint8_t saved_backlight{100};
 
-static bool screen_sleeping{false};
 static bool panel_off{false};
 static bool radio_sleeping{false};
+
+bool screen_sleeping{false};
+void (*disable_touch_on_screen_sleep_callback)() = nullptr;
 
 static void push_locks(PowerLock flags) {
   if (has_flag(flags, PowerLock::PreventScreenFade))
@@ -78,6 +80,8 @@ static void on_sleep_timeout() {
   }
 
   if (!screen_sleeping) {
+    if (disable_touch_on_screen_sleep_callback) disable_touch_on_screen_sleep_callback();
+
     screen_sleeping = true;
     saved_backlight = SpiDisplay::default_instance().get_backlight();
     SpiDisplay::default_instance().set_backlight(BacklightState::On, 0, FADE_OUT_TIME_MS);
@@ -162,7 +166,6 @@ bool wake_up_screen(int8_t level) {
 
   return screen_was_sleeping;
 }
-
 
 void power_save_set_timeout(uint32_t timeout_ms) {
   current_timeout_ms = timeout_ms;

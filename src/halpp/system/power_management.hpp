@@ -7,6 +7,9 @@ void deep_sleep_for_seconds(uint32_t seconds);
 
 namespace halpp {
 
+extern bool screen_sleeping;
+extern void (*disable_touch_on_screen_sleep_callback)();
+
 void init_power_management();
 
 bool wake_up_screen(int8_t level = -1);  // Returns true if we woke the screen up from sleep mode
