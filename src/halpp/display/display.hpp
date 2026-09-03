@@ -19,8 +19,10 @@ namespace halpp {
 class Display {
  private:
   struct DisplayLock;
+  static Display* instance_;
 
  public:
+  static Display* instance() { return instance_; }
   virtual ~Display() { reset(); }
 
   // RAII-style lock for thread-safe LVGL access. Locks the internal mutex on construction. Unlocks
@@ -76,7 +78,7 @@ class Display {
 
  protected:
   constexpr Display() = default;
-  explicit Display(Config config) : config_(config) {}
+  explicit Display(Config config) : config_(config) { instance_ = this; }
 
   Config config_;
   esp_lcd_panel_handle_t panel_handle_ = nullptr;
