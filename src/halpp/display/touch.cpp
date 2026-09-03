@@ -134,6 +134,7 @@ void Touch::lvgl_read_cb(lv_indev_t* indev, lv_indev_data_t* data) {
   // 3. Screen Sleep & Ghost Click Protection
   if (is_currently_touching && (touch->ignore_until_release_ || !touch->is_enabled_)) {
     touch->ignore_until_release_ = true;
+    touch->is_enabled_ = true;  // Prevents the gate from staying closed (assume screen woke up).
     data->state = LV_INDEV_STATE_RELEASED;
     return;
   }
