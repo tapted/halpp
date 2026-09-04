@@ -317,6 +317,22 @@ EspResult<void> Display::draw_bitmap(int x_start, int y_start, int width, int he
                                    y_start + height, color_data);
 }
 
+EspResult<void> Display::draw_bitmap_2d(
+    int x_start, int y_start, int width, int height,
+    const void* color_data,
+    size_t src_width, size_t src_height,
+    int src_x_start, int src_y_start, int src_crop_width, int src_crop_height) {
+  if (!panel_handle_) return ESP_ERR_INVALID_STATE;
+
+  return esp_lcd_panel_draw_bitmap_2d(
+      panel_handle_,
+      x_start, y_start, x_start + width, y_start + height,
+      color_data,
+      src_width, src_height,
+      src_x_start, src_y_start,
+      src_x_start + src_crop_width, src_y_start + src_crop_height);
+}
+
 EspResult<void> Display::draw_indexed_bitmap(int x_start, int y_start, int width, int height,
                                              const void* pixel_data, const void* /*palette*/,
                                              uint32_t stride_bytes) {

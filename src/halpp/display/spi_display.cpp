@@ -48,8 +48,16 @@ void draw_default_boot_logo(Display& display) {
                       bg_color);  // Right
   }
 
-  // esp_lcd expects end coordinates (x_off + draw_w, y_off + draw_h) bounded by display
-  display.draw_bitmap(x_off, y_off, x_off + draw_w, y_off + draw_h, Assets::COLOR_LOGO.data());
+  if constexpr (draw_w == logo_size) {
+    display.draw_bitmap(x_off, y_off, x_off + draw_w, y_off + draw_h,
+                        halpp::Assets::COLOR_LOGO.data());
+  } else {
+    display.draw_bitmap_2d(x_off, y_off, draw_w, draw_h,      // Target rect on screen
+                           halpp::Assets::COLOR_LOGO.data(),  // Source buffer
+                           logo_size, logo_size,              // Native source dimensions (128x128)
+                           0, 0, draw_w, draw_h               // Source sub-region top-left crop
+    );
+  }
 }
 
 }  // namespace detail

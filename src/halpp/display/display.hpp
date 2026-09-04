@@ -65,6 +65,11 @@ class Display {
   virtual EspResult<void> draw_bitmap(int x_start, int y_start, int width, int height,
                                       const void* color_data, uint32_t stride_bytes = 0);
 
+  virtual EspResult<void> draw_bitmap_2d(int x_start, int y_start, int width, int height,
+                                         const void* color_data, size_t src_width,
+                                         size_t src_height, int src_x_start, int src_y_start,
+                                         int src_crop_width, int src_crop_height);
+
   // New hook for LVGL indexed formats (cleanly separates the ARGB8888 palette from the pixels)
   virtual EspResult<void> draw_indexed_bitmap(int x_start, int y_start, int width, int height,
                                               const void* pixel_data, const void* palette,
