@@ -18,10 +18,10 @@ esp_err_t not_supported_new_panel_func(const esp_lcd_panel_io_handle_t,
   return ESP_ERR_NOT_SUPPORTED;
 }
 
-void draw_default_boot_logo(halpp::Display& display) {
+void draw_default_boot_logo(Display& display) {
   constexpr uint16_t WIDTH = config::Display::WIDTH;
   constexpr uint16_t HEIGHT = config::Display::HEIGHT;
-  constexpr uint16_t logo_size = halpp::Assets::COLOR_LOGO_SIZE;
+  constexpr uint16_t logo_size = Assets::COLOR_LOGO_SIZE;
 
   // Offsets anchored to top-left if display is smaller than logo
   constexpr uint16_t x_off = (WIDTH > logo_size) ? (WIDTH - logo_size) / 2 : 0;
@@ -31,7 +31,7 @@ void draw_default_boot_logo(halpp::Display& display) {
   constexpr uint16_t draw_w = std::min<uint16_t>(logo_size, WIDTH - x_off);
   constexpr uint16_t draw_h = std::min<uint16_t>(logo_size, HEIGHT - y_off);
 
-  constexpr uint32_t bg_color = halpp::Assets::COLOR_LOGO_BG_COLOR;
+  constexpr uint32_t bg_color = Assets::COLOR_LOGO_BG_COLOR;
 
   // Fill negative space only where space actually exists
   if constexpr (y_off > 0) {
@@ -49,8 +49,7 @@ void draw_default_boot_logo(halpp::Display& display) {
   }
 
   // esp_lcd expects end coordinates (x_off + draw_w, y_off + draw_h) bounded by display
-  display.draw_bitmap(x_off, y_off, x_off + draw_w, y_off + draw_h,
-                      halpp::Assets::COLOR_LOGO.data());
+  display.draw_bitmap(x_off, y_off, x_off + draw_w, y_off + draw_h, Assets::COLOR_LOGO.data());
 }
 
 }  // namespace detail

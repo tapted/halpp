@@ -4,8 +4,6 @@
 #include <esp_heap_caps.h>
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
-#include <esp_lcd_panel_ssd1306.h>
-#include <esp_lcd_panel_st7789.h>
 #include <esp_log.h>
 #include <lvgl.h>
 
@@ -16,18 +14,19 @@ namespace halpp {
 
 static const char* TAG = "Ssd1306";
 
-EspResult<void> Ssd1306::init_default_i2c(uint8_t i2c_address, uint16_t width, uint16_t height) {
+EspResult<void> Ssd1306::init_default_i2c() {
   auto& inst = default_instance();
   if (inst.is_initialized()) return ESP_OK;
 
   // 1. Configure the I2C IO layer specifics for the SSD1306
   esp_lcd_panel_io_i2c_config_t io_config = {
-      .dev_addr = i2c_address,
-      .scl_speed_hz = 400000,  // 400 kHz is the maximum for SSD1306
-      .control_phase_bytes = 1,
-      .dc_bit_offset = 6,  // Crucial: Tells the IO layer where the Data/Command bit lives
-      .lcd_cmd_bits = 8,
-      .lcd_param_bits = 8,
+      .dev_addr = config::Display::I2C_ADDRESS,
+      .scl_speed_hz = config::I2CConfig::CLK_SPEED,  // 400 kHz is the maximum for SSD1306
+      .control_phase_bytes = config::Display::I2C_CONTROL_PHASE_BYTES,  // 1 byte for SSD1306
+      // Crucial: Tells the IO layer where the Data/Command bit lives
+      .dc_bit_offset = config::Display::I2C_DC_BIT_OFFSET,
+      .lcd_cmd_bits = config::Display::LCD_COMMAND_BITS,
+      .lcd_param_bits = config::Display::LCD_PARAM_BITS,
       .on_color_trans_done = Display::on_color_trans_done,
       .user_ctx = &inst,
       .flags =
@@ -47,9 +46,9 @@ EspResult<void> Ssd1306::init_default_i2c(uint8_t i2c_address, uint16_t width, u
 
   // Inject into the base class configuration. Note the bits_per_pixel!
   inst.config_ = Config{
-      .width = width,
-      .height = height,
-      .bits_per_pixel = 1,
+      .width = config::Display::WIDTH,
+      .height = config::Display::HEIGHT,
+      .bits_per_pixel = config::Display::BITS_PER_PIXEL,
       .io_handle = io_handle,
       .owns_io_handle = true,
   };
@@ -60,29 +59,22 @@ EspResult<void> Ssd1306::init_default_i2c(uint8_t i2c_address, uint16_t width, u
 EspResult<void> Ssd1306::begin() {
   if (!config_.io_handle) return ESP_ERR_INVALID_STATE;
   if (is_initialized()) return ESP_OK;
-  switch (config_.height) {
-    case 32:
-    case 64:
-      break;
-    default:
-      ESP_LOGE(TAG, "Unsupported SSD1306 height: %d. Only 32 or 64 are supported.", config_.height);
-      return ESP_ERR_INVALID_ARG;
-  }
-  esp_lcd_panel_ssd1306_config_t ssd1306_config = {.height = static_cast<uint8_t>(config_.height)};
+
   esp_lcd_panel_dev_config_t panel_config = {
       .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,  // Ignored by monochrome SSD1306
       .data_endian = LCD_RGB_DATA_ENDIAN_BIG,      // Ignored by monochrome SSD1306
       .bits_per_pixel = 1,
       // I2C modules typically don't have a hardware reset pin wired
       .reset_gpio_num = GPIO_NUM_NC,
-      .vendor_config = &ssd1306_config,
+      .vendor_config = config::Display::VENDOR_CONFIG,
       .flags =
           {
               .reset_active_high = 0,
           },
   };
 
-  if (EspError err = esp_lcd_new_panel_ssd1306(config_.io_handle, &panel_config, &panel_handle_)) {
+  if (EspError err =
+          config::Display::NEW_PANEL_FUNC(config_.io_handle, &panel_config, &panel_handle_)) {
     return err.log(TAG, "Failed to create SSD1306 panel handle");
   }
 
@@ -92,7 +84,7 @@ EspResult<void> Ssd1306::begin() {
   if (EspError err = esp_lcd_panel_init(panel_handle_)) return err;
 
   // Invert in hardware for now. We maybe need to read the lvgl palette properly.
-  invert(halpp::config::Display::INVERT_COLORS);
+  invert(config::Display::INVERT_COLORS);
 
   // Ensure RAM doesn't show static on boot
   if (config_.width == 128 && config_.height == 64) {

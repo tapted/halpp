@@ -63,8 +63,12 @@ struct SharedDefaults {
     static constexpr gpio_num_t PIN_RESET = GPIO_NUM_NC;           // Reset (RST)
     static constexpr gpio_num_t PIN_BACKLIGHT_PWM = GPIO_NUM_NC;   // Backlight PWM control
 
-    static constexpr uint8_t SPI_COMMAND_BITS = 8;
-    static constexpr uint8_t SPI_PARAM_BITS = 8;
+    static constexpr uint8_t I2C_ADDRESS = 0x00;  // Set to init an i2c display e.g. 0x3C (SSD1306)
+    static constexpr uint8_t I2C_CONTROL_PHASE_BYTES = 1;  // 1 byte for SSD1306
+    static constexpr uint8_t I2C_DC_BIT_OFFSET = 6;
+
+    static constexpr uint8_t LCD_COMMAND_BITS = 8;
+    static constexpr uint8_t LCD_PARAM_BITS = 8;
 
     static constexpr uint8_t BITS_PER_PIXEL = 16;
     static constexpr lcd_rgb_element_order_t RGB_ELEMENT_ORDER = LCD_RGB_ELEMENT_ORDER_RGB;

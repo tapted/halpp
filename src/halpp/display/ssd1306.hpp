@@ -23,8 +23,7 @@ class Ssd1306 : public Display {
   }
 
   // Factory convenience method
-  static EspResult<void> init_default_i2c(uint8_t i2c_address = 0x3C, uint16_t width = 128,
-                                          uint16_t height = 64);
+  static EspResult<void> init_default_i2c();
 
   static EspResult<void> deinit_default() { return default_instance().reset(); }
 
