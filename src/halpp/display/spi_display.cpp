@@ -12,32 +12,45 @@ static constexpr const char TAG[] = "SpiDisplay";
 
 namespace halpp {
 namespace detail {
-esp_err_t not_supported_new_panel_func(const esp_lcd_panel_io_handle_t io,
-                                       const esp_lcd_panel_dev_config_t* panel_dev_config,
-                                       esp_lcd_panel_handle_t* ret_panel) {
+esp_err_t not_supported_new_panel_func(const esp_lcd_panel_io_handle_t,
+                                       const esp_lcd_panel_dev_config_t*, esp_lcd_panel_handle_t*) {
   ESP_LOGE(TAG, "No NEW_PANEL_FUNC defined in halpp::config::Display");
   return ESP_ERR_NOT_SUPPORTED;
 }
 
 void draw_default_boot_logo(halpp::Display& display) {
-  // Calculate dynamic centering for any display resolution
-  const uint16_t WIDTH = config::Display::WIDTH;
-  const uint16_t HEIGHT = config::Display::HEIGHT;
-  const uint16_t logo_size = halpp::Assets::COLOR_LOGO_SIZE;
-  const uint16_t x_off = (WIDTH - logo_size) / 2;
-  const uint16_t y_off = (HEIGHT - logo_size) / 2;
+  constexpr uint16_t WIDTH = config::Display::WIDTH;
+  constexpr uint16_t HEIGHT = config::Display::HEIGHT;
+  constexpr uint16_t logo_size = halpp::Assets::COLOR_LOGO_SIZE;
 
-  // Match the deep space background color from the asset generator
-  const uint32_t bg_color = halpp::Assets::COLOR_LOGO_BG_COLOR;
+  // Offsets anchored to top-left if display is smaller than logo
+  constexpr uint16_t x_off = (WIDTH > logo_size) ? (WIDTH - logo_size) / 2 : 0;
+  constexpr uint16_t y_off = (HEIGHT > logo_size) ? (HEIGHT - logo_size) / 2 : 0;
 
-  // Frame the negative space around the logo (top, bottom, left, right)
-  display.fill_rect(0, 0, WIDTH, y_off, bg_color);
-  display.fill_rect(0, y_off + logo_size, WIDTH, HEIGHT - y_off - logo_size, bg_color);
-  display.fill_rect(0, y_off, x_off, logo_size, bg_color);
-  display.fill_rect(x_off + logo_size, y_off, WIDTH - x_off - logo_size, logo_size, bg_color);
+  // Visible width and height clamped to hardware screen dimensions
+  constexpr uint16_t draw_w = std::min<uint16_t>(logo_size, WIDTH - x_off);
+  constexpr uint16_t draw_h = std::min<uint16_t>(logo_size, HEIGHT - y_off);
 
-  // Draw the compile-time color logo perfectly in the center
-  display.draw_bitmap(x_off, y_off, logo_size, logo_size, halpp::Assets::COLOR_LOGO.data());
+  constexpr uint32_t bg_color = halpp::Assets::COLOR_LOGO_BG_COLOR;
+
+  // Fill negative space only where space actually exists
+  if constexpr (y_off > 0) {
+    display.fill_rect(0, 0, WIDTH, y_off, bg_color);  // Top
+  }
+  if constexpr (HEIGHT > y_off + logo_size) {
+    display.fill_rect(0, y_off + logo_size, WIDTH, HEIGHT - y_off - logo_size, bg_color);  // Bottom
+  }
+  if constexpr (x_off > 0) {
+    display.fill_rect(0, y_off, x_off, draw_h, bg_color);  // Left
+  }
+  if constexpr (WIDTH > x_off + logo_size) {
+    display.fill_rect(x_off + logo_size, y_off, WIDTH - x_off - logo_size, draw_h,
+                      bg_color);  // Right
+  }
+
+  // esp_lcd expects end coordinates (x_off + draw_w, y_off + draw_h) bounded by display
+  display.draw_bitmap(x_off, y_off, x_off + draw_w, y_off + draw_h,
+                      halpp::Assets::COLOR_LOGO.data());
 }
 
 }  // namespace detail
