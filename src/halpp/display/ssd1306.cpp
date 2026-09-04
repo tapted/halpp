@@ -8,7 +8,7 @@
 #include <lvgl.h>
 
 #include "halpp/display/boot_logo.hpp"
-#include "halpp/i2c/i2c_master.hpp"
+#include "halpp/display/i2c_init.hpp"
 
 namespace halpp {
 
@@ -18,41 +18,10 @@ EspResult<void> Ssd1306::init_default_i2c() {
   auto& inst = default_instance();
   if (inst.is_initialized()) return ESP_OK;
 
-  // 1. Configure the I2C IO layer specifics for the SSD1306
-  esp_lcd_panel_io_i2c_config_t io_config = {
-      .dev_addr = config::Display::I2C_ADDRESS,
-      .scl_speed_hz = config::I2CConfig::CLK_SPEED,  // 400 kHz is the maximum for SSD1306
-      .control_phase_bytes = config::Display::I2C_CONTROL_PHASE_BYTES,  // 1 byte for SSD1306
-      // Crucial: Tells the IO layer where the Data/Command bit lives
-      .dc_bit_offset = config::Display::I2C_DC_BIT_OFFSET,
-      .lcd_cmd_bits = config::Display::LCD_COMMAND_BITS,
-      .lcd_param_bits = config::Display::LCD_PARAM_BITS,
-      .on_color_trans_done = Display::on_color_trans_done,
-      .user_ctx = &inst,
-      .flags =
-          {
-              .dc_low_on_data = 0,
-              .disable_control_phase = 0,
-          },
-  };
+  auto config = init_i2c_display(&inst);
+  if (!config) return config.strip().log_error(TAG, "init_i2c_display");
 
-  esp_lcd_panel_io_handle_t io_handle = nullptr;
-
-  // Link the display IO to halpp's modern I2C Master bus
-  if (EspError err = esp_lcd_new_panel_io_i2c(I2CMaster::instance().get_bus_handle(), &io_config,
-                                              &io_handle)) {
-    return err.log(TAG, "Failed to create I2C IO handle");
-  }
-
-  // Inject into the base class configuration. Note the bits_per_pixel!
-  inst.config_ = Config{
-      .width = config::Display::WIDTH,
-      .height = config::Display::HEIGHT,
-      .bits_per_pixel = config::Display::BITS_PER_PIXEL,
-      .io_handle = io_handle,
-      .owns_io_handle = true,
-  };
-
+  inst.config_ = *config;
   return inst.begin();
 }
 
@@ -61,11 +30,11 @@ EspResult<void> Ssd1306::begin() {
   if (is_initialized()) return ESP_OK;
 
   esp_lcd_panel_dev_config_t panel_config = {
-      .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,  // Ignored by monochrome SSD1306
-      .data_endian = LCD_RGB_DATA_ENDIAN_BIG,      // Ignored by monochrome SSD1306
-      .bits_per_pixel = 1,
+      .rgb_ele_order = config::Display::RGB_ELEMENT_ORDER,  // Ignored by monochrome SSD1306
+      .data_endian = config::Display::DATA_ENDIAN,          // Ignored by monochrome SSD1306
+      .bits_per_pixel = config::Display::BITS_PER_PIXEL,
       // I2C modules typically don't have a hardware reset pin wired
-      .reset_gpio_num = GPIO_NUM_NC,
+      .reset_gpio_num = config::Display::PIN_RESET,  // GPIO_NUM_NC for no reset
       .vendor_config = config::Display::VENDOR_CONFIG,
       .flags =
           {
@@ -87,11 +56,12 @@ EspResult<void> Ssd1306::begin() {
   invert(config::Display::INVERT_COLORS);
 
   // Ensure RAM doesn't show static on boot
-  if (config_.width == 128 && config_.height == 64) {
-    // draw_bitmap(0, 0, config_.width, config_.height, Assets::BOOT_LOGO.data());
-    // Boot logo is already transposed.
+  if constexpr (config::Display::BITS_PER_PIXEL == 1 &&
+                config::Display::WIDTH == Assets::MONOCHROME_LOGO_WIDTH &&
+                config::Display::HEIGHT == Assets::MONOCHROME_LOGO_HEIGHT) {
+    // Boot logo is already transposed: write directly rather than via draw_bitmap.
     esp_lcd_panel_draw_bitmap(panel_handle_, 0, 0, config_.width, config_.height,
-                              Assets::BOOT_LOGO.data());
+                              Assets::MONOCHROME_BOOT_LOGO.data());
   } else {
     clear();
   }
@@ -102,7 +72,7 @@ EspResult<void> Ssd1306::begin() {
   return ESP_OK;
 }
 
-EspResult<void> Ssd1306::draw_bitmap(int x, int y, int w, int h, const void* color_data,
+EspResult<void> Ssd1306::draw_bitmap(int x, int y, int w, int h, const void* __restrict color_data,
                                      uint32_t stride) {
   if (!panel_handle_) return ESP_ERR_INVALID_STATE;
 
@@ -122,7 +92,9 @@ EspResult<void> Ssd1306::draw_bitmap(int x, int y, int w, int h, const void* col
   }
 
   std::memset(tx_buffer_, 0, tx_size);
-  const uint8_t* src = static_cast<const uint8_t*>(color_data);
+
+  const uint8_t* __restrict src = static_cast<const uint8_t*>(color_data);
+  uint8_t* __restrict dest = tx_buffer_;
 
   // The mathematically flawless Transpose (Horizontal LVGL -> Vertical SSD1306)
   for (int row = 0; row < h; row++) {
@@ -135,7 +107,7 @@ EspResult<void> Ssd1306::draw_bitmap(int x, int y, int w, int h, const void* col
         // Write to the vertical SSD1306 page buffer
         int dst_byte_idx = (row / 8) * w + col;
         int dst_bit_idx = row % 8;  // SSD1306 puts topmost pixel in LSB
-        tx_buffer_[dst_byte_idx] |= (1 << dst_bit_idx);
+        dest[dst_byte_idx] |= (1 << dst_bit_idx);
       }
     }
   }

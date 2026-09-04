@@ -106,7 +106,10 @@ constexpr std::array<uint16_t, Size * Size> generate_color_logo() {
   return buffer;
 }
 
-constexpr auto BOOT_LOGO = generate_boot_logo<128, 64>();
+constexpr uint16_t MONOCHROME_LOGO_WIDTH = 128;
+constexpr uint16_t MONOCHROME_LOGO_HEIGHT = 64;
+constexpr auto MONOCHROME_BOOT_LOGO =
+    generate_boot_logo<MONOCHROME_LOGO_WIDTH, MONOCHROME_LOGO_HEIGHT>();
 
 constexpr uint16_t COLOR_LOGO_SIZE = 128;
 constexpr uint16_t COLOR_LOGO_BG_COLOR = rgb565(5, 5, 15);

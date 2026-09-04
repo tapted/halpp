@@ -60,7 +60,7 @@ EspResult<Display::Config> init_spi_display(Display* instance) {
     return err.log("halpp::init_spi_display", "Failed to create SPI IO handle");
   }
 
-  // Config for injecting into bas class.
+  // Config for injecting into base class.
   return Display::Config{
       .width = config::Display::WIDTH,
       .height = config::Display::HEIGHT,
