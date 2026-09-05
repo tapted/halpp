@@ -22,39 +22,44 @@ static void draw_default_color_boot_logo(Display& display) {
   constexpr uint16_t HEIGHT = config::Display::HEIGHT;
   constexpr uint16_t logo_size = Assets::COLOR_LOGO_SIZE;
 
-  // Offsets anchored to top-left if display is smaller than logo
-  constexpr uint16_t x_off = (WIDTH > logo_size) ? (WIDTH - logo_size) / 2 : 0;
-  constexpr uint16_t y_off = (HEIGHT > logo_size) ? (HEIGHT - logo_size) / 2 : 0;
+  // Screen coordinates (pads edges if screen is larger than logo)
+  const uint16_t target_x = (WIDTH > logo_size) ? (WIDTH - logo_size) / 2 : 0;
+  const uint16_t target_y = (HEIGHT > logo_size) ? (HEIGHT - logo_size) / 2 : 0;
+
+  // Source crop offsets (centers crop if screen is smaller than logo)
+  const uint16_t src_x = (WIDTH < logo_size) ? (logo_size - WIDTH) / 2 : 0;
+  const uint16_t src_y = (HEIGHT < logo_size) ? (logo_size - HEIGHT) / 2 : 0;
 
   // Visible width and height clamped to hardware screen dimensions
-  constexpr uint16_t draw_w = std::min<uint16_t>(logo_size, WIDTH - x_off);
-  constexpr uint16_t draw_h = std::min<uint16_t>(logo_size, HEIGHT - y_off);
+  constexpr uint16_t draw_w = std::min<uint16_t>(logo_size, WIDTH);
+  constexpr uint16_t draw_h = std::min<uint16_t>(logo_size, HEIGHT);
 
   constexpr uint32_t bg_color = Assets::COLOR_LOGO_BG_COLOR;
 
   // Fill negative space only where space actually exists
-  if constexpr (y_off > 0) {
-    display.fill_rect(0, 0, WIDTH, y_off, bg_color);  // Top
+  if (target_y > 0) {
+    display.fill_rect(0, 0, WIDTH, target_y, bg_color);  // Top
   }
-  if constexpr (HEIGHT > y_off + logo_size) {
-    display.fill_rect(0, y_off + logo_size, WIDTH, HEIGHT - y_off - logo_size, bg_color);  // Bottom
+  if (HEIGHT > target_y + logo_size) {
+    display.fill_rect(0, target_y + logo_size, WIDTH, HEIGHT - target_y - logo_size,
+                      bg_color);  // Bottom
   }
-  if constexpr (x_off > 0) {
-    display.fill_rect(0, y_off, x_off, draw_h, bg_color);  // Left
+  if (target_x > 0) {
+    display.fill_rect(0, target_y, target_x, draw_h, bg_color);  // Left
   }
-  if constexpr (WIDTH > x_off + logo_size) {
-    display.fill_rect(x_off + logo_size, y_off, WIDTH - x_off - logo_size, draw_h,
+  if (WIDTH > target_x + logo_size) {
+    display.fill_rect(target_x + logo_size, target_y, WIDTH - target_x - logo_size, draw_h,
                       bg_color);  // Right
   }
 
-  if constexpr (draw_w == logo_size) {
-    display.draw_bitmap(x_off, y_off, x_off + draw_w, y_off + draw_h,
+  if (draw_w == logo_size) {
+    display.draw_bitmap(target_x, target_y, target_x + draw_w, target_y + draw_h,
                         halpp::Assets::COLOR_LOGO.data());
   } else {
-    display.draw_bitmap_2d(x_off, y_off, draw_w, draw_h,      // Target rect on screen
-                           halpp::Assets::COLOR_LOGO.data(),  // Source buffer
-                           logo_size, logo_size,              // Native source dimensions (128x128)
-                           0, 0, draw_w, draw_h               // Source sub-region top-left crop
+    display.draw_bitmap_2d(target_x, target_y, draw_w, draw_h,  // Target rect on screen
+                           halpp::Assets::COLOR_LOGO.data(),    // Source buffer
+                           logo_size, logo_size,                // Source total size (128x128)
+                           src_x, src_y, draw_w, draw_h         // Source crop position & size
     );
   }
 }
