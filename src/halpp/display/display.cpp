@@ -124,8 +124,9 @@ void Display::notify() {
 
 // static
 // --- LVGL 9 ISR Callback ---
-IRAM_ATTR bool Display::on_color_trans_done(esp_lcd_panel_io_handle_t panel_io,
-                                            esp_lcd_panel_io_event_data_t* edata, void* user_ctx) {
+IRAM_ATTR bool Display::on_color_trans_done(esp_lcd_panel_io_handle_t /*panel_io*/,
+                                            esp_lcd_panel_io_event_data_t* /*edata*/,
+                                            void* user_ctx) {
   Display* display = static_cast<Display*>(user_ctx);
   if (display && display->lv_display_) {
     lv_display_flush_ready(display->lv_display_);

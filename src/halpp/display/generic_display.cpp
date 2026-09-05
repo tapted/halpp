@@ -53,8 +53,7 @@ static void draw_default_color_boot_logo(Display& display) {
   }
 
   if (draw_w == logo_size) {
-    display.draw_bitmap(target_x, target_y, target_x + draw_w, target_y + draw_h,
-                        halpp::Assets::COLOR_LOGO.data());
+    display.draw_bitmap(target_x, target_y, draw_w, draw_h, halpp::Assets::COLOR_LOGO.data());
   } else {
     display.draw_bitmap_2d(target_x, target_y, draw_w, draw_h,  // Target rect on screen
                            halpp::Assets::COLOR_LOGO.data(),    // Source buffer
