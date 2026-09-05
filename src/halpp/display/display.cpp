@@ -13,6 +13,7 @@
 #include "espbase/main_loop_task.hpp"
 #include "espbase/yielding_task.hpp"
 #include "halpp/config.hpp"
+#include "halpp/display/generic_display.hpp"  // needed for the default in config_defaults.hpp
 #include "halpp/display/i2c_init.hpp"
 #include "halpp/display/spi_init.hpp"
 
@@ -150,7 +151,8 @@ EspResult<void> Display::init_lvgl(void (*on_screen_timer_tick_cb)()) {
   // 1. Calculate Buffer Size dynamically via halpp_board.hpp overrides
   constexpr size_t LVGL_OVERHEAD = 128;  // sizeof(lv_draw_buf_t)
   const uint32_t pixels_per_screen = config_.width * config_.height;
-  const uint32_t buffer_pixels = pixels_per_screen / LVGLConfig::BUFFER_FRACTION;
+  const uint32_t buffer_pixels =
+      (pixels_per_screen + LVGLConfig::BUFFER_FRACTION - 1) / LVGLConfig::BUFFER_FRACTION;
   const size_t buffer_bytes = (buffer_pixels * config_.bits_per_pixel + 7) / 8 + LVGL_OVERHEAD;
 
   // 2. Allocate DMA-capable memory
@@ -331,6 +333,14 @@ EspResult<void> Display::fill_rect(uint16_t x0, uint16_t y0, uint16_t w, uint16_
 
 EspResult<void> Display::clear() {
   return fill_rect(0, 0, config_.width, config_.height, 0);
+}
+
+uint8_t Display::get_backlight() const {
+  return 0;
+}
+
+EspResult<void> Display::set_backlight(BacklightState, uint8_t, int) {
+  return ESP_OK;
 }
 
 EspResult<void> Display::draw_bitmap(int x_start, int y_start, int width, int height,

@@ -5,11 +5,6 @@
 
 namespace halpp {
 
-enum class BacklightState {
-  Off = 0,
-  On = 1,
-};
-
 class GenericDisplay : public Display {
  public:
   using Display::Display;
@@ -17,8 +12,8 @@ class GenericDisplay : public Display {
   // Initializes the Display panel hardware
   EspResult<void> begin() override;
 
-  uint8_t get_backlight() const { return backlight_.get_level(); }
-  EspResult<void> set_backlight(BacklightState state, uint8_t brightness, int fade_ms = 500) {
+  uint8_t get_backlight() const override { return backlight_.get_level(); }
+  EspResult<void> set_backlight(BacklightState state, uint8_t brightness, int fade_ms = 500) override {
     if (state == BacklightState::On) {
       if (EspError err = backlight_.begin()) return err;
       return backlight_.set_level(brightness, fade_ms);

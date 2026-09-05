@@ -16,6 +16,11 @@ typedef struct _lv_display_t lv_display_t;
 
 namespace halpp {
 
+enum class BacklightState {
+  Off = 0,
+  On = 1,
+};
+
 class Display {
  private:
   struct DisplayLock;
@@ -64,6 +69,10 @@ class Display {
   // Fills a rectangle safely using a fixed-size DMA chunking buffer
   EspResult<void> fill_rect(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h, uint32_t color);
   EspResult<void> clear();
+
+  virtual uint8_t get_backlight() const;
+  virtual EspResult<void> set_backlight(BacklightState state, uint8_t brightness,
+                                        int fade_ms = 500);
 
   // Virtualized so subclasses can intercept and transpose raw data (like SSD1306)
   virtual EspResult<void> draw_bitmap(int x_start, int y_start, int width, int height,
