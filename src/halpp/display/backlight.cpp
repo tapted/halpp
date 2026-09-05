@@ -32,7 +32,10 @@ EspResult<> Backlight::begin() {
   if (channel_) {
     return ESP_OK;  // Already initialized
   }
-  ESP_LOGI(TAG, "Initializing backlight...");
+  if (config::Display::PIN_BACKLIGHT_PWM == GPIO_NUM_NC) {
+    return ESP_ERR_NOT_SUPPORTED;  // No backlight pin defined
+  }
+  ESP_LOGD(TAG, "Initializing backlight...");
 
   EspResult<HAL::Timer> timer_res =
       HAL::Timer::configure(config::Display::BACKLIGHT_LEDC_TIMER,                      //
@@ -57,7 +60,7 @@ EspResult<> Backlight::begin() {
   timer_ = std::move(*timer_res);
   channel_ = std::move(*chan_res);
 
-  ESP_LOGI(TAG, "Backlight initialized");
+  ESP_LOGD(TAG, "Backlight initialized");
   return ESP_OK;
 }
 
@@ -68,6 +71,9 @@ EspResult<> Backlight::reset() {
 }
 
 EspResult<> Backlight::set_level(uint8_t level, int fade_ms) {
+  if (!channel_) {
+    return config::Display::PIN_BACKLIGHT_PWM == GPIO_NUM_NC ? ESP_OK : ESP_ERR_INVALID_STATE;
+  }
   if (level > config::Display::BACKLIGHT_MAX) {
     level = config::Display::BACKLIGHT_MAX;
   }

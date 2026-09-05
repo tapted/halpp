@@ -2,75 +2,10 @@
 
 #include <cstring>
 #include <esp_heap_caps.h>
-#include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
-#include <esp_log.h>
 #include <lvgl.h>
 
-#include "halpp/display/boot_logo.hpp"
-#include "halpp/display/i2c_init.hpp"
-
 namespace halpp {
-
-static const char* TAG = "Ssd1306";
-
-EspResult<void> Ssd1306::init_default_i2c() {
-  auto& inst = default_instance();
-  if (inst.is_initialized()) return ESP_OK;
-
-  auto config = init_i2c_display(&inst);
-  if (!config) return config.strip().log_error(TAG, "init_i2c_display");
-
-  inst.config_ = *config;
-  return inst.begin();
-}
-
-EspResult<void> Ssd1306::begin() {
-  if (!config_.io_handle) return ESP_ERR_INVALID_STATE;
-  if (is_initialized()) return ESP_OK;
-
-  esp_lcd_panel_dev_config_t panel_config = {
-      .rgb_ele_order = config::Display::RGB_ELEMENT_ORDER,  // Ignored by monochrome SSD1306
-      .data_endian = config::Display::DATA_ENDIAN,          // Ignored by monochrome SSD1306
-      .bits_per_pixel = config::Display::BITS_PER_PIXEL,
-      // I2C modules typically don't have a hardware reset pin wired
-      .reset_gpio_num = config::Display::PIN_RESET,  // GPIO_NUM_NC for no reset
-      .vendor_config = config::Display::VENDOR_CONFIG,
-      .flags =
-          {
-              .reset_active_high = 0,
-          },
-  };
-
-  if (EspError err =
-          config::Display::NEW_PANEL_FUNC(config_.io_handle, &panel_config, &panel_handle_)) {
-    return err.log(TAG, "Failed to create SSD1306 panel handle");
-  }
-
-  // Reset will likely be a no-op because the reset GPIO is not connected.
-  if (EspError err = esp_lcd_panel_reset(panel_handle_)) return err;
-
-  if (EspError err = esp_lcd_panel_init(panel_handle_)) return err;
-
-  // Invert in hardware for now. We maybe need to read the lvgl palette properly.
-  invert(config::Display::INVERT_COLORS);
-
-  // Ensure RAM doesn't show static on boot
-  if constexpr (config::Display::BITS_PER_PIXEL == 1 &&
-                config::Display::WIDTH == Assets::MONOCHROME_LOGO_WIDTH &&
-                config::Display::HEIGHT == Assets::MONOCHROME_LOGO_HEIGHT) {
-    // Boot logo is already transposed: write directly rather than via draw_bitmap.
-    esp_lcd_panel_draw_bitmap(panel_handle_, 0, 0, config_.width, config_.height,
-                              Assets::MONOCHROME_BOOT_LOGO.data());
-  } else {
-    clear();
-  }
-
-  if (EspError err = esp_lcd_panel_disp_on_off(panel_handle_, true)) return err;  // 100ms delay.
-
-  ESP_LOGI(TAG, "SSD1306 Initialized (%dx%d)", config_.width, config_.height);
-  return ESP_OK;
-}
 
 EspResult<void> Ssd1306::draw_bitmap(int x, int y, int w, int h, const void* __restrict color_data,
                                      uint32_t stride) {

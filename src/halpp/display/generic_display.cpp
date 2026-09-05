@@ -1,4 +1,4 @@
-#include "halpp/display/spi_display.hpp"
+#include "halpp/display/generic_display.hpp"
 
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
@@ -6,9 +6,8 @@
 
 #include "halpp/config.hpp"
 #include "halpp/display/boot_logo.hpp"
-#include "halpp/display/spi_init.hpp"
 
-static constexpr const char TAG[] = "SpiDisplay";
+static constexpr const char TAG[] = "GenericDisplay";
 
 namespace halpp {
 namespace detail {
@@ -18,7 +17,7 @@ esp_err_t not_supported_new_panel_func(const esp_lcd_panel_io_handle_t,
   return ESP_ERR_NOT_SUPPORTED;
 }
 
-void draw_default_boot_logo(Display& display) {
+static void draw_default_color_boot_logo(Display& display) {
   constexpr uint16_t WIDTH = config::Display::WIDTH;
   constexpr uint16_t HEIGHT = config::Display::HEIGHT;
   constexpr uint16_t logo_size = Assets::COLOR_LOGO_SIZE;
@@ -60,20 +59,28 @@ void draw_default_boot_logo(Display& display) {
   }
 }
 
-}  // namespace detail
-
-EspResult<void> SpiDisplay::init_default_spi() {
-  auto& inst = default_instance();
-  if (inst.is_initialized()) return ESP_OK;
-
-  auto config = init_spi_display(&inst);
-  if (!config) return config.strip().log_error(TAG, "init_spi_display");
-
-  inst.config_ = *config;
-  return inst.begin();
+static void draw_default_monochrome_boot_logo(Display& display) {
+  // Directly writes the pre-transposed monochrome logo to prevent static on boot
+  if constexpr (config::Display::WIDTH == Assets::MONOCHROME_LOGO_WIDTH &&
+                config::Display::HEIGHT == Assets::MONOCHROME_LOGO_HEIGHT) {
+    esp_lcd_panel_draw_bitmap(display.get_panel_handle(), 0, 0, config::Display::WIDTH,
+                              config::Display::HEIGHT, Assets::MONOCHROME_BOOT_LOGO.data());
+  } else {
+    display.clear();
+  }
 }
 
-EspResult<void> SpiDisplay::begin() {
+void draw_default_boot_logo(Display& display) {
+  if constexpr (config::Display::BITS_PER_PIXEL == 1) {
+    draw_default_monochrome_boot_logo(display);
+  } else {
+    draw_default_color_boot_logo(display);
+  }
+}
+
+}  // namespace detail
+
+EspResult<void> GenericDisplay::begin() {
   if (!config_.io_handle) return ESP_ERR_INVALID_STATE;
   if (is_initialized()) return ESP_OK;
 
@@ -106,16 +113,18 @@ EspResult<void> SpiDisplay::begin() {
   if (config::Display::X_GAP != 0 || config::Display::Y_GAP != 0) {
     esp_lcd_panel_set_gap(panel_handle_, config::Display::X_GAP, config::Display::Y_GAP);
   }
-  if (EspError err = esp_lcd_panel_disp_on_off(panel_handle_, true)) return err;
 
   config::Display::BOOT_LOGO_FUNC(*this);
+  if (EspError err = esp_lcd_panel_disp_on_off(panel_handle_, true)) return err;
 
-  if (EspError err = backlight_.begin()) {
-    return err.log(TAG, "Failed to initialize backlight");
+  if (config::Display::PIN_BACKLIGHT_PWM != GPIO_NUM_NC) {
+    if (EspError err = backlight_.begin()) {
+      return err.log(TAG, "Failed to initialize backlight");
+    }
+    backlight_.set_level(config::Display::BACKLIGHT_DEFAULT);
   }
-  backlight_.set_level(config::Display::BACKLIGHT_DEFAULT);
 
-  ESP_LOGI(TAG, "SpiDisplay Initialized via Native IDF (%dx%d)", config_.width, config_.height);
+  ESP_LOGI(TAG, "Display Initialized via Native IDF (%dx%d)", config_.width, config_.height);
   return ESP_OK;
 }
 

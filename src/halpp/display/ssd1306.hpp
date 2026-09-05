@@ -5,40 +5,22 @@
 
 #pragma once
 
-#include <optional>
-
-#include "halpp/display/display.hpp"
+#include "halpp/display/generic_display.hpp"
 
 namespace halpp {
 
-class Ssd1306 : public Display {
+class Ssd1306 : public GenericDisplay {
  public:
-  using Display::Display;  // Inherit constructors
-
-  // --- Single-Device Default Pattern ---
-  static Ssd1306& default_instance() {
-    static std::optional<Ssd1306> inst;
-    if (!inst) inst.emplace();
-    return *inst;
-  }
-
-  // Factory convenience method
-  static EspResult<void> init_default_i2c();
-
-  static EspResult<void> deinit_default() { return default_instance().reset(); }
-
-  // Initializes the OLED chip hardware
-  EspResult<void> begin();
+  using GenericDisplay::GenericDisplay;  // Inherit constructors
 
   // --- Hardware Quirks Overrides ---
-
   // SSD1306 requires vertical-page formatting. We intercept and transpose.
   EspResult<void> draw_bitmap(int x, int y, int w, int h, const void* data,
                               uint32_t stride_bytes = 0) override;
 
   // SSD1306 requires page-aligned Y coordinates. We inject the rounding event.
   void on_lvgl_init(lv_display_t* disp) override;
-  
+
  private:
   uint8_t* tx_buffer_ = nullptr;
   size_t tx_buffer_size_ = 0;

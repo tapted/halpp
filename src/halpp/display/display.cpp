@@ -8,10 +8,13 @@
 #include <esp_timer.h>
 #include <lvgl.h>
 #include <mutex>
+#include <optional>
 
 #include "espbase/main_loop_task.hpp"
 #include "espbase/yielding_task.hpp"
 #include "halpp/config.hpp"
+#include "halpp/display/i2c_init.hpp"
+#include "halpp/display/spi_init.hpp"
 
 static const char* TAG = "HAL::Display";
 
@@ -81,6 +84,29 @@ static std::optional<uint32_t> lvgl_step_function(LVGLTaskType&) {
 namespace halpp {
 
 constinit Display::DisplayLock Display::mutex;
+
+Display& Display::instance() {
+  static std::optional<config::Display::DisplayType> inst;
+  if (!inst) inst.emplace();
+  return *inst;
+}
+
+EspResult<void> Display::init_default() {
+  auto& inst = instance();
+  if (inst.is_initialized()) return ESP_OK;
+
+  if constexpr (config::Display::I2C_ADDRESS != 0x00) {
+    auto config = init_i2c_display(&inst);
+    if (!config) return config.strip().log_error(TAG, "init_i2c_display");
+    inst.config_ = *config;
+  } else {
+    auto config = init_spi_display(&inst);
+    if (!config) return config.strip().log_error(TAG, "init_spi_display");
+    inst.config_ = *config;
+  }
+
+  return inst.begin();
+}
 
 void Display::DisplayLock::lock() {
   lvgl_mutex.lock();
@@ -317,20 +343,16 @@ EspResult<void> Display::draw_bitmap(int x_start, int y_start, int width, int he
                                    y_start + height, color_data);
 }
 
-EspResult<void> Display::draw_bitmap_2d(
-    int x_start, int y_start, int width, int height,
-    const void* color_data,
-    size_t src_width, size_t src_height,
-    int src_x_start, int src_y_start, int src_crop_width, int src_crop_height) {
+EspResult<void> Display::draw_bitmap_2d(int x_start, int y_start, int width, int height,
+                                        const void* color_data, size_t src_width, size_t src_height,
+                                        int src_x_start, int src_y_start, int src_crop_width,
+                                        int src_crop_height) {
   if (!panel_handle_) return ESP_ERR_INVALID_STATE;
 
-  return esp_lcd_panel_draw_bitmap_2d(
-      panel_handle_,
-      x_start, y_start, x_start + width, y_start + height,
-      color_data,
-      src_width, src_height,
-      src_x_start, src_y_start,
-      src_x_start + src_crop_width, src_y_start + src_crop_height);
+  return esp_lcd_panel_draw_bitmap_2d(panel_handle_, x_start, y_start, x_start + width,
+                                      y_start + height, color_data, src_width, src_height,
+                                      src_x_start, src_y_start, src_x_start + src_crop_width,
+                                      src_y_start + src_crop_height);
 }
 
 EspResult<void> Display::draw_indexed_bitmap(int x_start, int y_start, int width, int height,

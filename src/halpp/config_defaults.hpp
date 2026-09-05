@@ -11,7 +11,8 @@
 
 namespace halpp {
 class Display;
-}
+class GenericDisplay;
+}  // namespace halpp
 
 namespace halpp::detail {
 
@@ -58,6 +59,8 @@ struct SharedDefaults {
     static constexpr uint32_t SCL_WAIT_US = 0;  // 0 = use default
   };
   struct Display {
+    using DisplayType = halpp::GenericDisplay;
+
     static constexpr gpio_num_t PIN_TEARING_EFFECT = GPIO_NUM_NC;  // Tearing Effect (TE)
     static constexpr gpio_num_t PIN_DATA_COMMAND = GPIO_NUM_NC;    // Data/Command (DC)
     static constexpr gpio_num_t PIN_RESET = GPIO_NUM_NC;           // Reset (RST)
@@ -173,10 +176,6 @@ struct Defaults : public SharedDefaults {
   struct I2CConfig : public SharedDefaults::I2CConfig {
     static constexpr gpio_num_t PIN_SDA = GPIO_NUM_11;
     static constexpr gpio_num_t PIN_SCL = GPIO_NUM_10;
-  };
-  struct Display : public SharedDefaults::Display {
-    static constexpr gpio_num_t PIN_TEARING_EFFECT = GPIO_NUM_18;
-    static constexpr gpio_num_t PIN_BACKLIGHT_PWM = GPIO_NUM_5;
   };
   struct Touch : public SharedDefaults::Touch {
     static constexpr gpio_num_t PIN_INTERRUPT = GPIO_NUM_4;
