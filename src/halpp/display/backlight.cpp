@@ -70,6 +70,17 @@ EspResult<> Backlight::reset() {
   return timer_.reset();
 }
 
+uint32_t Backlight::normalize_backlight_max_to_duty_max(uint8_t level, uint32_t duty_max) {
+  if (level > config::Display::BACKLIGHT_MAX) {
+    level = config::Display::BACKLIGHT_MAX;
+  }
+  float normalized = static_cast<float>(level) / static_cast<float>(config::Display::BACKLIGHT_MAX);
+  // Gamma 2.2 Perception Correction
+  // Maps linear UI percentages to logarithmic human eye sensitivity
+  float gamma_corrected = std::powf(normalized, 2.2f);
+  return static_cast<uint32_t>(gamma_corrected * static_cast<float>(duty_max) + 0.5f);
+}
+
 EspResult<> Backlight::set_level(uint8_t level, int fade_ms) {
   if (!channel_) {
     return config::Display::PIN_BACKLIGHT_PWM == GPIO_NUM_NC ? ESP_OK : ESP_ERR_INVALID_STATE;
@@ -83,11 +94,7 @@ EspResult<> Backlight::set_level(uint8_t level, int fade_ms) {
 
   // Calculate duty cycle
   uint32_t max_duty = (1 << config::Display::BACKLIGHT_LEDC_RESOLUTION) - 1;
-  // Gamma 2.2 Perception Correction
-  // Maps linear UI percentages to logarithmic human eye sensitivity
-  float normalized = static_cast<float>(level) / static_cast<float>(config::Display::BACKLIGHT_MAX);
-  float gamma_corrected = std::powf(normalized, 2.2f);
-  uint32_t duty = static_cast<uint32_t>(gamma_corrected * static_cast<float>(max_duty) + 0.5f);
+  uint32_t duty = normalize_backlight_max_to_duty_max(level, max_duty);
 
   // Interrupt any fades currently in progress
   if (EspError err = channel_.fade_stop()) {

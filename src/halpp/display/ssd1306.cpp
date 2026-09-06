@@ -1,12 +1,13 @@
 #include "halpp/display/ssd1306.hpp"
 
+#include <cstdint>
 #include <cstring>
 #include <esp_heap_caps.h>
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
 #include <lvgl.h>
 
-#include "halpp/config.hpp"
+#include "halpp/display/backlight.hpp"
 #include "halpp/display/display.hpp"
 
 namespace halpp {
@@ -67,12 +68,7 @@ EspResult<> Ssd1306::set_backlight(BacklightState state, uint8_t brightness, int
   } else if (state == BacklightState::On) {
     esp_lcd_panel_io_tx_param(get_io_handle(), SSD1306_DISPLAYON, NULL, 0);
   }
-
-  if (brightness > config::Display::BACKLIGHT_MAX) {
-    brightness = config::Display::BACKLIGHT_MAX;
-  }
-
-  uint8_t scaled = static_cast<uint8_t>(brightness * 255 / config::Display::BACKLIGHT_MAX);
+  uint8_t scaled = display::Backlight::normalize_backlight_max_to_duty_max(brightness, 255);
   EspResult<> r = esp_lcd_panel_io_tx_param(get_io_handle(), SSD1306_SETCONTRAST, &scaled, 1);
   if (r) contrast_level_ = brightness;
   return r;

@@ -17,6 +17,8 @@ class Backlight {
   EspResult<> begin();
   EspResult<> reset();
 
+  static uint32_t normalize_backlight_max_to_duty_max(uint8_t level, uint32_t duty_max);
+
   // Sets the backlight level (0 to config::Display::BACKLIGHT_MAX) with an optional fade
   EspResult<> set_level(uint8_t level, int fade_ms = 0);
 
