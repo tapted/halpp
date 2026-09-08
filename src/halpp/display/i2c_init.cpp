@@ -24,6 +24,7 @@ EspResult<Display::Config> init_i2c_display(Display* instance) {
               .dc_low_on_data = 0,
               .disable_control_phase = 0,
           },
+      .transaction_timeout_ms = config::I2CConfig::TIMEOUT_MS,
   };
 
   esp_lcd_panel_io_handle_t io_handle = nullptr;

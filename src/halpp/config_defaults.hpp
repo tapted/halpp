@@ -60,6 +60,8 @@ struct SharedDefaults {
   };
   struct Display {
     using DisplayType = halpp::GenericDisplay;
+    static constexpr uint16_t WIDTH = 128;
+    static constexpr uint16_t HEIGHT = 64;
 
     static constexpr gpio_num_t PIN_TEARING_EFFECT = GPIO_NUM_NC;  // Tearing Effect (TE)
     static constexpr gpio_num_t PIN_DATA_COMMAND = GPIO_NUM_NC;    // Data/Command (DC)
@@ -226,6 +228,28 @@ struct Defaults : public SharedDefaults {
     static constexpr gpio_num_t PIN_MISO = GPIO_NUM_5;
     static constexpr gpio_num_t PIN_MOSI = GPIO_NUM_6;
     static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_4;
+  };
+};  // Defaults
+#endif
+
+#if CONFIG_IDF_TARGET_ESP32C3
+struct Defaults : public SharedDefaults {
+  struct System {
+    static constexpr gpio_num_t PIN_BOOT = GPIO_NUM_0; //9?
+  };
+  struct SpiBus : public SharedDefaults::SpiBus {
+    static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_NC;
+    static constexpr gpio_num_t PIN_SERIAL_CLOCK = GPIO_NUM_8;
+    static constexpr gpio_num_t PIN_MISO = GPIO_NUM_9;
+    static constexpr gpio_num_t PIN_MOSI = GPIO_NUM_10;
+  };
+  struct Usb : public SharedDefaults::Usb {
+    static constexpr gpio_num_t PIN_UART_TX = GPIO_NUM_21;
+    static constexpr gpio_num_t PIN_UART_RX = GPIO_NUM_20;
+  };
+  struct I2CConfig : public SharedDefaults::I2CConfig {
+    static constexpr gpio_num_t PIN_SDA = GPIO_NUM_6;
+    static constexpr gpio_num_t PIN_SCL = GPIO_NUM_7;
   };
 };  // Defaults
 #endif
