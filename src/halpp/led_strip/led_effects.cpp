@@ -1,3 +1,4 @@
+#if __has_include(<led_strip_types.h>)
 #include "halpp/led_strip/led_effects.hpp"
 
 #include <algorithm>
@@ -157,3 +158,4 @@ uint16_t rgb_to_hue(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 }  // namespace halpp
+#endif // __has_include(<led_strip_types.h>)
