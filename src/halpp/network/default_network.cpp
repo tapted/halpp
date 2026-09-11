@@ -89,7 +89,7 @@ void DefaultNetwork::on_time_synced(struct timeval* tv) {
 
   char strftime_buf[64];
   strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-  ESP_LOGI(TAG, "Time synchronized. The current time is: %s", strftime_buf);
+  ESP_LOGI("NTP", "Sync: %s", strftime_buf);
   if (time_sync_callback) {
     time_sync_callback(tv);
   }
