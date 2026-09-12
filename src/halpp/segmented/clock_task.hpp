@@ -14,6 +14,7 @@ class ClockTask {
     uint8_t hour = 7;
     uint8_t minute = 0;
     uint8_t second = 0;
+    uint8_t day_mask = 0xf;
   };
 
   struct TaskData {
@@ -24,9 +25,9 @@ class ClockTask {
   constexpr ClockTask(OnAlarm on_alarm = nullptr) { alarms_.on_alarm = on_alarm; }
   void on_time_synced();
 
-  void set_alarm(size_t index, uint8_t hour, uint8_t minute, uint8_t second) {
+  void set_alarm(size_t index, uint8_t hour, uint8_t minute, uint8_t second, uint8_t day_mask) {
     if (index >= MAX_ALARMS) return;
-    alarms_.alarms_hhmmss[index] = HhMmSs{State::Active, hour, minute, second};
+    alarms_.alarms_hhmmss[index] = HhMmSs{State::Active, hour, minute, second, day_mask};
   }
 
  private:

@@ -15,6 +15,8 @@ static std::optional<uint32_t> clock_update_step(MainLoopTask<ClockTask::TaskDat
     ClockTask::HhMmSs& t = alarms->alarms_hhmmss[i];
     if (t.state == ClockTask::State::Idle) continue;
 
+    if ((t.day_mask & (1 << timeinfo.tm_wday)) == 0) continue;
+
     if (timeinfo.tm_hour == t.hour && timeinfo.tm_min == t.minute && timeinfo.tm_sec == t.second) {
       if (t.state == ClockTask::State::Active) {
         t.state = ClockTask::State::Triggered;

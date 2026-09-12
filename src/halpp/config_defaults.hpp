@@ -97,7 +97,7 @@ struct SharedDefaults {
     static constexpr ledc_timer_t BACKLIGHT_LEDC_TIMER = LEDC_TIMER_0;
     static constexpr uint32_t BACKLIGHT_LEDC_FREQ = 3000;
     static constexpr ledc_timer_bit_t BACKLIGHT_LEDC_RESOLUTION = LEDC_TIMER_12_BIT;
-    static constexpr uint8_t BACKLIGHT_DEFAULT = 30;  // Backlight level set on boot
+    static constexpr uint8_t BACKLIGHT_DEFAULT = 30;  // Backlight level set on boot (0-100)
     static constexpr uint8_t BACKLIGHT_MAX = 100;     // Max backlight level (0-100)
   };
   struct Touch {
