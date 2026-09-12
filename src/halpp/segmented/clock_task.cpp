@@ -8,16 +8,27 @@ static std::optional<uint32_t> clock_update_step(MainLoopTask<ClockTask::TaskDat
   tm timeinfo;
   uint32_t delay_ms = HAL::I2C7Seg::default_instance().show_time(&timeinfo);
 
+  // Convert current time to seconds since midnight
+  uint32_t current_sec_of_day =
+      (timeinfo.tm_hour * 3600) + (timeinfo.tm_min * 60) + timeinfo.tm_sec;
+
   ClockTask::TaskData* alarms = task.data();
   for (size_t i = 0; i < alarms->alarms_hhmmss.size(); ++i) {
     if (!alarms->on_alarm) continue;
 
     ClockTask::HhMmSs& t = alarms->alarms_hhmmss[i];
     if (t.state == ClockTask::State::Idle) continue;
-
+    
     if ((t.day_mask & (1 << timeinfo.tm_wday)) == 0) continue;
 
-    if (timeinfo.tm_hour == t.hour && timeinfo.tm_min == t.minute && timeinfo.tm_sec == t.second) {
+    // Convert alarm time to seconds since midnight
+    uint32_t alarm_sec_of_day = (t.hour * 3600) + (t.minute * 60) + t.second;
+
+    // Check if we are within a 5-second safety window of the alarm
+    bool is_alarm_time =
+        (current_sec_of_day >= alarm_sec_of_day) && (current_sec_of_day < alarm_sec_of_day + 5);
+
+    if (is_alarm_time) {
       if (t.state == ClockTask::State::Active) {
         t.state = ClockTask::State::Triggered;
         alarms->on_alarm(i);
