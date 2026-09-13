@@ -212,8 +212,8 @@ struct Defaults : public SharedDefaults {
     static constexpr gpio_num_t PIN_UART_RX = GPIO_NUM_17;
   };
   struct I2CConfig : public SharedDefaults::I2CConfig {
-    static constexpr gpio_num_t PIN_SDA = GPIO_NUM_11;
-    static constexpr gpio_num_t PIN_SCL = GPIO_NUM_10;
+    static constexpr gpio_num_t PIN_SDA = GPIO_NUM_18;
+    static constexpr gpio_num_t PIN_SCL = GPIO_NUM_19;
   };
   struct Display : public SharedDefaults::Display {
     static constexpr gpio_num_t PIN_DATA_COMMAND = GPIO_NUM_15;
