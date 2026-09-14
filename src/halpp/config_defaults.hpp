@@ -203,6 +203,9 @@ struct Defaults : public SharedDefaults {
 #endif
 #if CONFIG_IDF_TARGET_ESP32C6
 struct Defaults : public SharedDefaults {
+  struct System : public SharedDefaults::System {
+    static constexpr gpio_num_t PIN_BOOT = GPIO_NUM_9;  // C6 uses 9, not 0.
+  };
   struct SpiBus : public SharedDefaults::SpiBus {
     static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_14;
     static constexpr gpio_num_t PIN_SERIAL_CLOCK = GPIO_NUM_7;
@@ -236,8 +239,8 @@ struct Defaults : public SharedDefaults {
 
 #if CONFIG_IDF_TARGET_ESP32C3
 struct Defaults : public SharedDefaults {
-  struct System {
-    static constexpr gpio_num_t PIN_BOOT = GPIO_NUM_0;  // 9?
+  struct System : public SharedDefaults::System {
+    static constexpr gpio_num_t PIN_BOOT = GPIO_NUM_9;  // C3 uses 9, not 0.
   };
   struct SpiBus : public SharedDefaults::SpiBus {
     static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_NC;
