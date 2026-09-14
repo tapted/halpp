@@ -2,7 +2,7 @@
 
 #include <driver/ledc.h>
 
-namespace HAL {
+namespace halpp {
 
 Channel::Channel(Channel&& other) noexcept {
   mode_ = other.mode_;
@@ -65,4 +65,4 @@ EspResult<> Channel::fade_start(ledc_fade_mode_t wait_done) {
   return ledc_fade_start(mode_, channel_, wait_done);
 }
 
-}  // namespace HAL
+}  // namespace halpp

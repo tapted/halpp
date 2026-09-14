@@ -11,14 +11,14 @@
 #include <driver/ledc.h>
 #include <hal/ledc_ll.h>
 
-namespace HAL {
+namespace halpp {
 
-static const char* TAG = "PassiveBuzzer";
+static const char* TAG = "halpp::Passive";
 
 Passive::~Passive() {
 }
 
-EspResult<void> Passive::init_default(Config config) {
+EspResult<> Passive::init_default(Config config) {
   std::optional<Passive>& opt = default_optional();
   if (!opt) {
     opt.emplace(config);
@@ -26,7 +26,7 @@ EspResult<void> Passive::init_default(Config config) {
   return opt->begin();
 }
 
-EspResult<void> Passive::begin() {
+EspResult<> Passive::begin() {
   if (is_initialized()) return ESP_OK;
 
   // 1. Configure the hardware timer and take ownership
@@ -145,4 +145,4 @@ void Passive::set_hardware_note(uint32_t frequency, float volume) {
   pwm_timer_.set_freq(frequency);
 }
 
-}  // namespace HAL
+}  // namespace halpp

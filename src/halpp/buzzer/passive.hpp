@@ -8,6 +8,7 @@
 #pragma once
 
 #include <cstdint>
+#include <hal/ledc_types.h>
 #include <optional>
 #include <soc/gpio_num.h>
 #include <span>
@@ -16,10 +17,9 @@
 #include "espbase/yielding_task.hpp"
 #include "halpp/ledc/channel.hpp"
 #include "halpp/ledc/timer.hpp"
+#include "halpp/config.hpp"
 
-#include <hal/ledc_types.h>
-
-namespace HAL {
+namespace halpp {
 
 struct Note {
   uint16_t frequency_hz = 4000;
@@ -34,9 +34,9 @@ using Melody = std::span<const Note>;
 class Passive {
  public:
   struct Config {
-    gpio_num_t gpio_num;
-    ledc_timer_t timer_num = LEDC_TIMER_0;
-    ledc_channel_t channel = LEDC_CHANNEL_0;
+    gpio_num_t gpio_num = config::Buzzer::PIN_PWM;
+    ledc_timer_t timer_num = config::Buzzer::LEDC_TIMER;
+    ledc_channel_t channel = config::Buzzer::LEDC_CHANNEL;
 #ifdef HALPP_USE_XTAL_FOR_BUZZER
     ledc_clk_cfg_t clk_cfg = LEDC_USE_XTAL_CLK;
     ledc_timer_bit_t timer_bit = LEDC_TIMER_13_BIT;
@@ -60,11 +60,11 @@ class Passive {
 
   // --- Pattern 2: Single-Device Default (init_default must be called first) ---
   static Passive& default_instance() { return *default_optional(); }
-  static EspResult<void> init_default(Config config);
+  static EspResult<> init_default(Config config);
   static void deinit_default() { default_optional().reset(); }
 
   // Executes hardware initialization and spawns background FreeRTOS task
-  EspResult<void> begin();
+  EspResult<> begin();
 
   // --- Playback Operations ---
   bool is_initialized() const { return !!pwm_timer_; }
@@ -108,4 +108,4 @@ class Passive {
   void set_hardware_note(uint32_t frequency_hz, float volume);
 };
 
-}  // namespace HAL
+}  // namespace halpp

@@ -4,7 +4,7 @@
 
 #include "halpp/ledc/channel.hpp"
 
-namespace HAL {
+namespace halpp {
 
 EspResult<Timer> Timer::configure(ledc_timer_t timer_num, ledc_clk_cfg_t clk_cfg,
                                   ledc_timer_bit_t resolution, uint32_t freq_hz, ledc_mode_t mode) {
@@ -35,7 +35,7 @@ EspResult<Channel> Timer::add_channel(ledc_channel_t channel, gpio_num_t gpio_nu
       .timer_sel = timer_,  // Automatically bound to THIS timer
       .duty = 0,
       .hpoint = 0,
-      .sleep_mode = LEDC_SLEEP_MODE_KEEP_ALIVE, // LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+      .sleep_mode = LEDC_SLEEP_MODE_KEEP_ALIVE,  // LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
       .flags = {},
       .deconfigure = false,
   };
@@ -89,4 +89,4 @@ EspResult<> Timer::set_freq(uint32_t freq_hz) {
   return ledc_set_freq(mode_, timer_, freq_hz);
 }
 
-}  // namespace HAL
+}  // namespace halpp

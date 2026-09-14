@@ -9,7 +9,7 @@
 
 #include "halpp/buzzer/passive.hpp"
 
-namespace HAL::beeps {
+namespace halpp::beeps {
 
 // Helper macro/constexpr for consistent UI volume
 constexpr uint8_t kUiVolume = 38;  // 0.15 * 255 ≈ 38
@@ -39,4 +39,4 @@ inline constexpr std::array<Note, 4> startup = {{
     {1046, 150, kUiVolume}  // C6
 }};
 
-}  // namespace HAL::beeps
+}  // namespace halpp::beeps

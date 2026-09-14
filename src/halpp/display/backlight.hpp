@@ -25,8 +25,8 @@ class Backlight {
   uint8_t get_level() const { return level_; }
 
  private:
-  HAL::Timer timer_;
-  HAL::Channel channel_;
+  Timer timer_;
+  Channel channel_;
   uint8_t level_ = 0;
 
   Backlight(const Backlight&) = delete;

@@ -9,7 +9,7 @@
 
 #include "espbase/esp_result.hpp"
 
-namespace HAL {
+namespace halpp {
 
 class Channel {
  public:
@@ -48,4 +48,4 @@ class Channel {
   uint32_t idle_level_ = 0;
 };
 
-}  // namespace HAL
+}  // namespace halpp

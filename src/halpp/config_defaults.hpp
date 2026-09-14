@@ -121,6 +121,8 @@ struct SharedDefaults {
   };
   struct Buzzer {
     static constexpr gpio_num_t PIN_PWM = GPIO_NUM_NC;  // PWM output for passive buzzer
+    static constexpr ledc_channel_t LEDC_CHANNEL = LEDC_CHANNEL_1;
+    static constexpr ledc_timer_t LEDC_TIMER = LEDC_TIMER_1;
   };
   struct IndicatorLed {
     static constexpr gpio_num_t PIN_RGB = GPIO_NUM_NC;  // RGB output for indicator LED
@@ -235,7 +237,7 @@ struct Defaults : public SharedDefaults {
 #if CONFIG_IDF_TARGET_ESP32C3
 struct Defaults : public SharedDefaults {
   struct System {
-    static constexpr gpio_num_t PIN_BOOT = GPIO_NUM_0; //9?
+    static constexpr gpio_num_t PIN_BOOT = GPIO_NUM_0;  // 9?
   };
   struct SpiBus : public SharedDefaults::SpiBus {
     static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_NC;

@@ -10,7 +10,7 @@
 
 #include "espbase/esp_result.hpp"
 
-namespace HAL {
+namespace halpp {
 
 class Channel;
 
@@ -46,4 +46,4 @@ class Timer {
   ledc_timer_t timer_ = LEDC_TIMER_MAX;
 };
 
-}  // namespace HAL
+}  // namespace halpp
