@@ -17,7 +17,7 @@
 #include "halpp/display/i2c_init.hpp"
 #include "halpp/display/spi_init.hpp"
 
-static const char* TAG = "HAL::Display";
+static constexpr char TAG[] = "halpp::Display";
 
 inline static void custom_rgb565_swap(void* __restrict buf, uint32_t buf_size_px) {
   uint16_t* __restrict buf16 = static_cast<uint16_t*>(buf);

@@ -4,7 +4,7 @@
 
 typedef struct esp_now_recv_info esp_now_recv_info_t;
 
-namespace HAL {
+namespace halpp {
 
 struct EspNowConfig {
   // If true, the ESP-NOW peer list will not be initialized with the broadcast address.
@@ -31,4 +31,4 @@ class EspNow {
   EspNowConfig config_;
 };
 
-}  // namespace HAL
+}  // namespace halpp

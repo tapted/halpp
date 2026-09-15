@@ -6,7 +6,7 @@
 
 class DefaultNetwork {
  public:
-  static HAL::NtpClient::SyncCallback time_sync_callback;
+  static halpp::NtpClient::SyncCallback time_sync_callback;
 
   constexpr DefaultNetwork() = default;
   EspResult<void> start();
@@ -17,9 +17,9 @@ class DefaultNetwork {
   virtual void network_lost();
 
  private:
-  HAL::NetStack network_stack_;
-  HAL::NtpClient ntp_;
-  HAL::WifiSta wifi_;
+  halpp::NetStack network_stack_;
+  halpp::NtpClient ntp_;
+  halpp::WifiSta wifi_;
 
   static void on_qrcode_ready(EspResult<std::string> qrcode, void* ctx);
   static void on_network_ready(const esp_netif_ip_info_t& ip_info, void* ctx) {

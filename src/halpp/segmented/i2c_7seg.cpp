@@ -7,9 +7,9 @@
 
 #include "halpp/i2c/i2c_master.hpp"
 
-namespace HAL {
+namespace halpp {
 
-static constexpr const char TAG[] = "I2C7Seg";
+static constexpr const char TAG[] = "halpp::I2C7Seg";
 
 // Number of consecutive write_display() failures before we skip the write to avoid flooding logs.
 static constexpr int FAIL_COUNT_SKIP_WRITE_DISPLAY_THRESHOLD = 5;
@@ -202,4 +202,4 @@ uint32_t I2C7Seg::show_time(tm* timeinfo_out) {
   return 60000 - ms_passed_in_minute + TARGET_OFFSET_MS;
 }
 
-}  // namespace HAL
+}  // namespace halpp

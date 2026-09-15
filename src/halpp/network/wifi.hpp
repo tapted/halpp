@@ -7,14 +7,15 @@
 
 #include "espbase/esp_result.hpp"
 
-namespace HAL {
+namespace halpp {
 
 // The Wi-Fi Station Config.
 struct WifiConfig {
   const char* ssid = nullptr;
   const char* password = nullptr;
   bool auto_reconnect = true;
-  bool ignore_stored_credentials = false;  // If true, will not use any previously stored credentials
+  // If true, will not use any previously stored credentials
+  bool ignore_stored_credentials = false;
 
   // Decoupled Event Callbacks
   void (*on_ready)(EspResult<std::string> qrcode, void* ctx) = nullptr;
@@ -37,8 +38,8 @@ class WifiSta {
   void start(const WifiConfig& config);
   void reset();
 
-  EspResult<void> disconnect();
-  EspResult<void> reconnect();  // Manual trigger if auto_reconnect is false
+  EspResult<> disconnect();
+  EspResult<> reconnect();  // Manual trigger if auto_reconnect is false
 
   bool is_provisioning() const { return provisioning_; }
 
@@ -63,4 +64,4 @@ class WifiSta {
                                void* event_data);
 };
 
-}  // namespace HAL
+}  // namespace halpp

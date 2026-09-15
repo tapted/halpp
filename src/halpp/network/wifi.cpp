@@ -8,7 +8,7 @@
 
 #include "espbase/nvs_store.hpp"
 
-namespace HAL {
+namespace halpp {
 
 static constexpr const char TAG[] = "WIFI_HAL";
 static constexpr const char NAMESPACE[] = "HALPP_WIFI";
@@ -169,12 +169,12 @@ void WifiSta::reset() {
   }
 }
 
-EspResult<void> WifiSta::disconnect() {
+EspResult<> WifiSta::disconnect() {
   if (!initialized_) return ESP_ERR_INVALID_STATE;
   return esp_wifi_disconnect();
 }
 
-EspResult<void> WifiSta::reconnect() {
+EspResult<> WifiSta::reconnect() {
   if (!initialized_) return ESP_ERR_INVALID_STATE;
   return esp_wifi_connect();
 }
@@ -253,4 +253,4 @@ void WifiSta::event_trampoline(void* arg, esp_event_base_t event_base, int32_t e
   }
 }
 
-}  // namespace HAL
+}  // namespace halpp

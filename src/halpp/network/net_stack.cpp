@@ -3,13 +3,11 @@
 #include <esp_event.h>
 #include <esp_netif.h>
 
-namespace {
-constexpr const char TAG[] = "NetStack";
-}
+static constexpr const char TAG[] = "halpp::NetStack";
 
-namespace HAL {
+namespace halpp {
 
-EspResult<void> NetStack::start() {
+EspResult<> NetStack::start() {
   if (initialized_) return ESP_ERR_INVALID_STATE;
   if (EspError err = esp_netif_init()) return err.log(TAG, "esp_netif_init");
   if (EspError err = esp_event_loop_create_default())
@@ -26,4 +24,4 @@ void NetStack::reset() {
   }
 }
 
-}  // namespace HAL
+}  // namespace halpp

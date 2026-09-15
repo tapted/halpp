@@ -6,7 +6,7 @@
 
 static std::optional<uint32_t> clock_update_step(MainLoopTask<ClockTask::TaskData>& task) {
   tm timeinfo;
-  uint32_t delay_ms = HAL::I2C7Seg::default_instance().show_time(&timeinfo);
+  uint32_t delay_ms = halpp::I2C7Seg::default_instance().show_time(&timeinfo);
 
   // Convert current time to seconds since midnight
   uint32_t current_sec_of_day =

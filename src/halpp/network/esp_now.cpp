@@ -3,7 +3,7 @@
 #include <esp_now.h>
 #include <esp_wifi.h>
 
-namespace HAL {
+namespace halpp {
 
 static constexpr const char TAG[] = "HALPP_ESP_NOW";
 static EspNow* instance = nullptr;
@@ -69,4 +69,4 @@ void EspNow::on_data_recv_trampoline(const esp_now_recv_info_t* info, const uint
     instance->config_.on_data_recv(info->src_addr, incomingData, static_cast<size_t>(len));
   }
 }
-}  // namespace HAL
+}  // namespace halpp

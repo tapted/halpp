@@ -2,14 +2,14 @@
  * @file melodies.hpp
  * @brief Pre-compiled music arrays for the Passive Buzzer
  * Defines melodies:
- * HAL::melodies::mo_li_hua
- * HAL::melodies::radioactive_riff
- * HAL::melodies::shanty_riff
- * HAL::melodies::limit_test_chord
- * HAL::melodies::korobeiniki
- * HAL::melodies::korobeiniki_riff
- * HAL::melodies::ambient_sequence
- * HAL::melodies::factory_drone
+ * halpp::melodies::mo_li_hua
+ * halpp::melodies::radioactive_riff
+ * halpp::melodies::shanty_riff
+ * halpp::melodies::limit_test_chord
+ * halpp::melodies::korobeiniki
+ * halpp::melodies::korobeiniki_riff
+ * halpp::melodies::ambient_sequence
+ * halpp::melodies::factory_drone
  */
 
 #pragma once
@@ -18,7 +18,7 @@
 
 #include "halpp/buzzer/passive.hpp"
 
-namespace HAL::melodies {
+namespace halpp::melodies {
 
 namespace internal {
 constexpr uint16_t freq_map[] = {
@@ -444,4 +444,4 @@ constexpr std::array<Note, 68> shanty_riff_extended = {{
     // { N_A4, 600, V_ACC }, { REST, 200, V_OFF }
 }};
 
-}  // namespace HAL::melodies
+}  // namespace halpp::melodies

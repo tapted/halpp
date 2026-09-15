@@ -16,11 +16,9 @@
 #define TIMEZONE "AEST-10AEDT,M10.1.0,M4.1.0/3"
 #endif
 
-namespace {
-constexpr const char TAG[] = "DefaultNetwork";
-}
+static constexpr char TAG[] = "DefaultNetwork";
 
-HAL::NtpClient::SyncCallback DefaultNetwork::time_sync_callback = nullptr;
+halpp::NtpClient::SyncCallback DefaultNetwork::time_sync_callback = nullptr;
 
 EspResult<void> DefaultNetwork::start() {
   // Configure standard C timezone rules
@@ -93,5 +91,5 @@ void DefaultNetwork::on_time_synced(struct timeval* tv) {
   if (time_sync_callback) {
     time_sync_callback(tv);
   }
-  // HAL::NtpClient::log_servers();
+  // halpp::NtpClient::log_servers();
 }

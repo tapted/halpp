@@ -10,7 +10,7 @@
 
 struct tm;
 
-namespace HAL {
+namespace halpp {
 
 class I2C7Seg {
  public:
@@ -31,7 +31,8 @@ class I2C7Seg {
   }
 
   // Initializes the default instance and attaches it to the bus
-  static EspResult<void> init_default(uint8_t i2c_address = halpp::config::Display7Seg::I2C_ADDRESS);
+  static EspResult<void> init_default(
+      uint8_t i2c_address = halpp::config::Display7Seg::I2C_ADDRESS);
 
   // Releases the device handle for the default instance
   static EspResult<void> deinit_default();
@@ -67,4 +68,4 @@ class I2C7Seg {
   int consecutive_fail_count_ = 0;
 };
 
-}  // namespace HAL
+}  // namespace halpp

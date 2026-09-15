@@ -9,7 +9,7 @@
 
 struct timeval;
 
-namespace HAL {
+namespace halpp {
 
 class NtpClient {
  public:
@@ -24,8 +24,7 @@ class NtpClient {
   NtpClient(NtpClient&&) = delete;
   NtpClient& operator=(NtpClient&&) = delete;
 
-  EspResult<void> init(const char* fallback_server = "pool.ntp.org",
-                       SyncCallback on_sync = nullptr);
+  EspResult<> init(const char* fallback_server = "pool.ntp.org", SyncCallback on_sync = nullptr);
 
   // Triggers the synchronization. Must only be called after acquiring a DHCP lease.
   void start();
@@ -36,4 +35,4 @@ class NtpClient {
   bool initialized_ = false;
 };
 
-}  // namespace HAL
+}  // namespace halpp

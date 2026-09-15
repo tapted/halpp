@@ -22,7 +22,7 @@ Initialize the buzzer using the default singleton instance.
 #include "halpp/buzzer/passive.hpp"
 
 // Initialize with a default configuration
-HAL::Passive::init_default({
+halpp::Passive::init_default({
     .gpio_num = GPIO_NUM_13,
     .timer_num = LEDC_TIMER_0,
     .channel = LEDC_CHANNEL_0
@@ -37,10 +37,10 @@ For simple system interactions, use the built-in scratchpad or static beep libra
 #include "halpp/buzzer/beeps.hpp"
 
 // Play a standard success chime
-HAL::Passive::default_instance().play(HAL::beeps::success);
+halpp::Passive::default_instance().play(halpp::beeps::success);
 
 // Or generate a dynamic beep on the fly (non-blocking)
-HAL::Passive::default_instance().beep(440, 200, 0.5f);
+halpp::Passive::default_instance().beep(440, 200, 0.5f);
 ```
 
 ### 3. Playing Custom Melodies
@@ -51,12 +51,12 @@ Melodies are defined as static arrays of `Note` structs, keeping them in read-on
 #include "halpp/buzzer/passive.hpp"
 
 // Define a melody in flash (zero RAM footprint)
-inline constexpr std::array<HAL::Note, 2> my_melody = {{
+inline constexpr std::array<halpp::Note, 2> my_melody = {{
     {440, 500, 0.1f}, // A4 for 500ms
     {880, 500, 0.1f}  // A5 for 500ms
 }};
 
-HAL::Passive::default_instance().play(my_melody);
+halpp::Passive::default_instance().play(my_melody);
 ```
 
 ---

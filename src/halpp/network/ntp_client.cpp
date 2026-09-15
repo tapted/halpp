@@ -3,9 +3,9 @@
 #include <esp_netif_sntp.h>
 #include <esp_sntp.h>
 
-namespace HAL {
+namespace halpp {
 
-EspResult<void> NtpClient::init(const char* fallback_server, NtpClient::SyncCallback on_sync) {
+EspResult<> NtpClient::init(const char* fallback_server, NtpClient::SyncCallback on_sync) {
   if (initialized_) return ESP_ERR_INVALID_STATE;
 
   esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG(fallback_server);
@@ -44,7 +44,7 @@ void NtpClient::reset() {
 // static
 void NtpClient::log_servers() {
   // By default, ESP-IDF supports 1 to 3 simultaneous NTP servers
-  uint8_t max_servers = 3;// esp_sntp_get_max_sync_servers();
+  uint8_t max_servers = 3;  // esp_sntp_get_max_sync_servers();
 
   ESP_LOGI("NTP", "Active SNTP Servers:");
   for (uint8_t i = 0; i < max_servers; ++i) {
@@ -63,4 +63,4 @@ void NtpClient::log_servers() {
   }
 }
 
-}  // namespace HAL
+}  // namespace halpp

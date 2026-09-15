@@ -2,7 +2,7 @@
 
 #include "espbase/esp_result.hpp"
 
-namespace HAL {
+namespace halpp {
 
 // Initializes LwIP and the Default Event Loop. Must exist before Wi-Fi or MQTT.
 class NetStack {
@@ -15,11 +15,11 @@ class NetStack {
   NetStack(NetStack&&) = delete;
   NetStack& operator=(NetStack&&) = delete;
 
-  EspResult<void> start();
+  EspResult<> start();
   void reset();
 
  private:
   bool initialized_ = false;
 };
 
-}  // namespace HAL
+}  // namespace halpp
