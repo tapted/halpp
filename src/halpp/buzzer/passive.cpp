@@ -11,6 +11,8 @@
 #include <driver/ledc.h>
 #include <hal/ledc_ll.h>
 
+#include "espbase/shutdown_registry.hpp"
+
 namespace halpp {
 
 static const char* TAG = "halpp::Passive";
@@ -22,6 +24,7 @@ EspResult<> Passive::init_default(Config config) {
   std::optional<Passive>& opt = default_optional();
   if (!opt) {
     opt.emplace(config);
+    ShutdownRegistry::register_fn(&Passive::deinit_default);
   }
   return opt->begin();
 }
