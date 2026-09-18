@@ -15,9 +15,10 @@
 
 #include "espbase/esp_result.hpp"
 #include "espbase/yielding_task.hpp"
+#include "halpp/config.hpp"
+#include "halpp/core/default_instance.hpp"
 #include "halpp/ledc/channel.hpp"
 #include "halpp/ledc/timer.hpp"
-#include "halpp/config.hpp"
 
 namespace halpp {
 
@@ -31,7 +32,7 @@ struct Note {
 // WARNING: The underlying memory backing this span must outlive the playback duration!
 using Melody = std::span<const Note>;
 
-class Passive {
+class Passive : public DefaultInstance<Passive> {
  public:
   struct Config {
     gpio_num_t gpio_num = config::Buzzer::PIN_PWM;
@@ -54,14 +55,8 @@ class Passive {
     uint32_t idle_level = 0;
   };
 
-  // --- Pattern 1: Multi-Device (Explicit Ownership) ---
   explicit Passive(Config config) : config_(config) {}
   ~Passive();
-
-  // --- Pattern 2: Single-Device Default (init_default must be called first) ---
-  static Passive& default_instance() { return *default_optional(); }
-  static EspResult<> init_default(Config config);
-  static void deinit_default() { default_optional().reset(); }
 
   // Executes hardware initialization and spawns background FreeRTOS task
   EspResult<> begin();
@@ -83,14 +78,6 @@ class Passive {
     size_t current_index = 0;   // State Machine offset tracking
     Passive* buzzer = nullptr;  // Allows the static loop to access hardware methods
   };
-
-  static std::optional<Passive>& default_optional() {
-    static std::optional<Passive> inst;
-    return inst;
-  }
-
-  Passive(const Passive&) = delete;
-  Passive& operator=(const Passive&) = delete;
 
   Config config_;
   PlaybackState playback_state_{};
