@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cassert>
 #include <mutex>
 #include <optional>
 #include <utility>
@@ -17,6 +16,21 @@ namespace halpp {
 template <typename T>
 class DefaultInstance {
  public:
+  // Destructors usually just call reset(), but lose the return value. This allows deinit_default
+  // to still report errors if needed.
+  EspResult<> reset() { return ESP_OK; }
+
+  template <typename... Args>
+  static EspResult<> init_default(Args&&... args) {
+    std::lock_guard<std::mutex> lock(default_mutex());
+    T& instance = emplace_default_instance(std::forward<Args>(args)...);
+
+    // Try to call the instance's init() method if it exists. Client classes must either have a per
+    // instance init(), or shadow `init_default` with their own implementation. E.g., to use
+    // set_default_instance() after creating the instance.
+    return instance.init();
+  }
+
   // The instance (unguarded) - caller must ensure it is initialized before use.
   static T& default_instance() { return *default_optional(); }
 
@@ -28,50 +42,50 @@ class DefaultInstance {
 
   // Default RAII cleanup. Derived classes can shadow this if they need to return
   // hardware error codes during shutdown (e.g., returning the result of a reset).
-  static EspResult<void> deinit_default() {
+  static EspResult<> deinit_default() {
     std::lock_guard<std::mutex> lock(default_mutex());
-    default_optional().reset();
-    return ESP_OK;
+    EspResult<> result = ESP_OK;
+    if (default_optional()) {
+      result = default_optional()->reset();
+      default_optional().reset();
+    }
+    return result;
   }
 
  protected:
   constexpr DefaultInstance() = default;
 
   // Path A: Factory Initialization (e.g., LedStrip::create_rmt -> std::move)
-  static EspResult<void> set_default_instance(T&& obj) {
+  static EspResult<> set_default_instance(T&& obj) {
     std::lock_guard<std::mutex> lock(default_mutex());
     if (default_optional()) return ESP_ERR_INVALID_STATE;
-    ShutdownRegistry::register_fn(&T::deinit_default);
+    ShutdownRegistry::register_fn(
+        [] { T::deinit_default().log_error("default_instance", __PRETTY_FUNCTION__); });
     default_optional() = std::move(obj);
     return ESP_OK;
   }
 
-  // Path B: Emplace & Initialize (e.g., Display, I2C7Seg)
-  template <typename... Args>
-  static T& emplace_default_instance(Args&&... args) {
-    std::lock_guard<std::mutex> lock(default_mutex());
-    if (!default_optional()) {
-      default_optional().emplace(std::forward<Args>(args)...);
-      ShutdownRegistry::register_fn(&T::deinit_default);
-    }
-    return *default_optional();
-  }
-
-  // Expose the raw optional and mutex for highly custom derived class logic
   static std::optional<T>& default_optional() {
     static constinit std::optional<T> instance_opt;
     return instance_opt;
   }
   static std::mutex& default_mutex() {
-#ifdef __clang__
     static std::mutex m;
-#else
-    static constinit std::mutex m;
-#endif
     return m;
   }
 
  private:
+  // Path B: Emplace & Initialize (e.g., Display, I2C7Seg). Lock must be held.
+  template <typename... Args>
+  static T& emplace_default_instance(Args&&... args) {
+    if (!default_optional()) {
+      default_optional().emplace(std::forward<Args>(args)...);
+      ShutdownRegistry::register_fn(
+          [] { T::deinit_default().log_error("default_instance", __PRETTY_FUNCTION__); });
+    }
+    return *default_optional();
+  }
+
   // Disable copy construction and assignment to enforce singleton behavior.
   DefaultInstance(const DefaultInstance&) = delete;
   DefaultInstance& operator=(const DefaultInstance&) = delete;

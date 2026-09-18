@@ -59,7 +59,7 @@ class Passive : public DefaultInstance<Passive> {
   ~Passive();
 
   // Executes hardware initialization and spawns background FreeRTOS task
-  EspResult<> begin();
+  EspResult<> init();
 
   // --- Playback Operations ---
   bool is_initialized() const { return !!pwm_timer_; }

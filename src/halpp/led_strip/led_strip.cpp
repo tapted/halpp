@@ -48,14 +48,12 @@ EspResult<LedStrip> LedStrip::create_rmt(const RmtConfig& config) {
 }
 
 EspResult<> LedStrip::init_default(const RmtConfig& config) {
-  std::optional<LedStrip>& opt = default_optional();
-  if (opt) return ESP_ERR_INVALID_STATE;  // Already initialized
+  if (is_default_initialized()) return ESP_ERR_INVALID_STATE;
+
   EspResult<LedStrip> result = LedStrip::create_rmt(config);
-  if (!result) {
-    return result.strip().log_error("LedStrip", "Failed to init_default");
-  }
-  opt = std::move(*result);
-  return ESP_OK;
+  if (!result) return result.strip().log_error("LedStrip", "Failed to init_default");
+
+  return set_default_instance(std::move(*result));
 }
 
 EspResult<> LedStrip::reset() {

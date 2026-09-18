@@ -7,10 +7,10 @@
 
 #include <cstdint>
 #include <led_strip_types.h>
-#include <optional>
 #include <soc/gpio_num.h>
 
 #include "espbase/esp_result.hpp"
+#include "halpp/core/default_instance.hpp"
 
 namespace halpp {
 
@@ -25,19 +25,14 @@ struct RmtConfig {
   bool auto_refresh = max_leds == 1;
 };
 
-class LedStrip {
+class LedStrip : public DefaultInstance<LedStrip> {
  public:
   constexpr LedStrip() = default;
   ~LedStrip() { reset(); }
 
   static EspResult<LedStrip> create_rmt(const RmtConfig& config);
-  static LedStrip& default_instance() { return *default_optional(); }
   static EspResult<> init_default(const RmtConfig& config);
-  static void deinit_default() { default_optional().reset(); }
-  static bool is_default_initialized() { return default_optional().has_value(); }
 
-  LedStrip(const LedStrip&) = delete;
-  LedStrip& operator=(const LedStrip&) = delete;
   LedStrip(LedStrip&& other) noexcept;
   LedStrip& operator=(LedStrip&& other) noexcept;
 
@@ -64,11 +59,6 @@ class LedStrip {
 
   template <typename Func>
   EspResult<> helper(Func func);
-
-  static std::optional<LedStrip>& default_optional() {
-    static std::optional<LedStrip> inst;
-    return inst;
-  }
 };
 
 }  // namespace halpp

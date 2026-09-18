@@ -18,7 +18,7 @@ static const char* TAG = "halpp::Passive";
 Passive::~Passive() {
 }
 
-EspResult<> Passive::begin() {
+EspResult<> Passive::init() {
   if (is_initialized()) return ESP_OK;
 
   // 1. Configure the hardware timer and take ownership
