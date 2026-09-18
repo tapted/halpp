@@ -23,7 +23,7 @@ class DefaultInstance {
   template <typename... Args>
   static EspResult<> init_default(Args&&... args) {
     std::lock_guard<std::mutex> lock(default_mutex());
-    T& instance = emplace_default_instance(std::forward<Args>(args)...);
+    T& instance = emplace_default_instance(lock, std::forward<Args>(args)...);
 
     // Try to call the instance's init() method if it exists. Client classes must either have a per
     // instance init(), or shadow `init_default` with their own implementation. E.g., to use
@@ -65,6 +65,17 @@ class DefaultInstance {
     return ESP_OK;
   }
 
+  // Path B: Emplace & Initialize (e.g., Display, I2C7Seg). Lock must be held.
+  template <typename... Args>
+  static T& emplace_default_instance(std::lock_guard<std::mutex>&, Args&&... args) {
+    if (!default_optional()) {
+      default_optional().emplace(std::forward<Args>(args)...);
+      ShutdownRegistry::register_fn(
+          [] { T::deinit_default().log_error("default_instance", __PRETTY_FUNCTION__); });
+    }
+    return *default_optional();
+  }
+
   static std::optional<T>& default_optional() {
     static constinit std::optional<T> instance_opt;
     return instance_opt;
@@ -75,17 +86,6 @@ class DefaultInstance {
   }
 
  private:
-  // Path B: Emplace & Initialize (e.g., Display, I2C7Seg). Lock must be held.
-  template <typename... Args>
-  static T& emplace_default_instance(Args&&... args) {
-    if (!default_optional()) {
-      default_optional().emplace(std::forward<Args>(args)...);
-      ShutdownRegistry::register_fn(
-          [] { T::deinit_default().log_error("default_instance", __PRETTY_FUNCTION__); });
-    }
-    return *default_optional();
-  }
-
   // Disable copy construction and assignment to enforce singleton behavior.
   DefaultInstance(const DefaultInstance&) = delete;
   DefaultInstance& operator=(const DefaultInstance&) = delete;

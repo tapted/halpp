@@ -27,10 +27,10 @@ class Display {
 
  public:
   static Display& instance();
-  static EspResult<void> init_default();
-  static EspResult<void> deinit_default() { return instance().reset(); }
+  static EspResult<> init_default();
+  static EspResult<> deinit_default() { return instance().reset(); }
 
-  virtual EspResult<void> begin() = 0;
+  virtual EspResult<> begin() = 0;
   virtual ~Display() { reset(); }
 
   // RAII-style lock for thread-safe LVGL access. Locks the internal mutex on construction. Unlocks
@@ -51,7 +51,7 @@ class Display {
 
   bool is_initialized() const { return panel_handle_ != nullptr; }
 
-  EspResult<void> init_lvgl(void (*on_screen_timer_tick)() = nullptr);
+  EspResult<> init_lvgl(void (*on_screen_timer_tick)() = nullptr);
   lv_display_t* get_lv_display() const { return lv_display_; }
   esp_lcd_panel_io_handle_t get_io_handle() const { return config_.io_handle; }
   esp_lcd_panel_handle_t get_panel_handle() const { return panel_handle_; }
@@ -60,31 +60,31 @@ class Display {
   uint16_t height() const { return config_.height; }
 
   // --- Universal Drawing Primitives ---
-  EspResult<void> reset();
-  EspResult<void> set_display_state(bool on);
-  EspResult<void> invert(bool inverted);
-  EspResult<void> mirror(bool mirror_x, bool mirror_y);
-  EspResult<void> swap_xy(bool swap);
+  EspResult<> reset();
+  EspResult<> set_display_state(bool on);
+  EspResult<> invert(bool inverted);
+  EspResult<> mirror(bool mirror_x, bool mirror_y);
+  EspResult<> swap_xy(bool swap);
 
   // Fills a rectangle safely using a fixed-size DMA chunking buffer
-  EspResult<void> fill_rect(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h, uint32_t color);
-  EspResult<void> clear();
+  EspResult<> fill_rect(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h, uint32_t color);
+  EspResult<> clear();
 
   virtual uint8_t get_backlight() const;
-  virtual EspResult<void> set_backlight(BacklightState state, uint8_t brightness,
+  virtual EspResult<> set_backlight(BacklightState state, uint8_t brightness,
                                         int fade_ms = 500);
 
   // Virtualized so subclasses can intercept and transpose raw data (like SSD1306)
-  virtual EspResult<void> draw_bitmap(int x_start, int y_start, int width, int height,
+  virtual EspResult<> draw_bitmap(int x_start, int y_start, int width, int height,
                                       const void* color_data, uint32_t stride_bytes = 0);
 
-  virtual EspResult<void> draw_bitmap_2d(int x_start, int y_start, int width, int height,
+  virtual EspResult<> draw_bitmap_2d(int x_start, int y_start, int width, int height,
                                          const void* color_data, size_t src_width,
                                          size_t src_height, int src_x_start, int src_y_start,
                                          int src_crop_width, int src_crop_height);
 
   // New hook for LVGL indexed formats (cleanly separates the ARGB8888 palette from the pixels)
-  virtual EspResult<void> draw_indexed_bitmap(int x_start, int y_start, int width, int height,
+  virtual EspResult<> draw_indexed_bitmap(int x_start, int y_start, int width, int height,
                                               const void* pixel_data, const void* palette,
                                               uint32_t stride_bytes = 0);
 

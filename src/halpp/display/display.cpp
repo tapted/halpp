@@ -87,12 +87,13 @@ namespace halpp {
 constinit Display::DisplayLock Display::mutex;
 
 Display& Display::instance() {
+  // This is DisplayType -- not Display -- so we can't use DefaultInstance here :/.
   static std::optional<config::Display::DisplayType> inst;
   if (!inst) inst.emplace();
   return *inst;
 }
 
-EspResult<void> Display::init_default() {
+EspResult<> Display::init_default() {
   auto& inst = instance();
   if (inst.is_initialized()) return ESP_OK;
 
@@ -140,7 +141,7 @@ static uint32_t halpp_lvgl_tick_cb(void) {
 }
 
 // --- LVGL 9 Initialization ---
-EspResult<void> Display::init_lvgl(void (*on_screen_timer_tick_cb)()) {
+EspResult<> Display::init_lvgl(void (*on_screen_timer_tick_cb)()) {
   ::on_screen_timer_tick = on_screen_timer_tick_cb;
   if (!is_initialized()) return ESP_ERR_INVALID_STATE;
   if (lv_display_) return ESP_OK;  // Already initialized
@@ -223,7 +224,7 @@ EspResult<void> Display::init_lvgl(void (*on_screen_timer_tick_cb)()) {
             break;
         }
 
-        EspResult<void> res;
+        EspResult<> res;
         if (palette_bytes > 0) {
           const uint8_t* palette = px_map;
           const uint8_t* pixels = px_map + palette_bytes;  // Cleanly advance past the header
@@ -252,7 +253,7 @@ EspResult<void> Display::init_lvgl(void (*on_screen_timer_tick_cb)()) {
   return ESP_OK;
 }
 
-EspResult<void> Display::reset() {
+EspResult<> Display::reset() {
   esp_err_t final_err = ESP_OK;
 
   if (panel_handle_) {
@@ -269,28 +270,27 @@ EspResult<void> Display::reset() {
   return final_err;
 }
 
-EspResult<void> Display::set_display_state(bool on) {
+EspResult<> Display::set_display_state(bool on) {
   if (!panel_handle_) return ESP_ERR_INVALID_STATE;
   return esp_lcd_panel_disp_on_off(panel_handle_, on);
 }
 
-EspResult<void> Display::invert(bool inverted) {
+EspResult<> Display::invert(bool inverted) {
   if (!panel_handle_) return ESP_ERR_INVALID_STATE;
   return esp_lcd_panel_invert_color(panel_handle_, inverted);
 }
 
-EspResult<void> Display::mirror(bool mirror_x, bool mirror_y) {
+EspResult<> Display::mirror(bool mirror_x, bool mirror_y) {
   if (!panel_handle_) return ESP_ERR_INVALID_STATE;
   return esp_lcd_panel_mirror(panel_handle_, mirror_x, mirror_y);
 }
 
-EspResult<void> Display::swap_xy(bool swap) {
+EspResult<> Display::swap_xy(bool swap) {
   if (!panel_handle_) return ESP_ERR_INVALID_STATE;
   return esp_lcd_panel_swap_xy(panel_handle_, swap);
 }
 
-EspResult<void> Display::fill_rect(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
-                                   uint32_t color) {
+EspResult<> Display::fill_rect(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h, uint32_t color) {
   if (!panel_handle_) return ESP_ERR_INVALID_STATE;
 
   // 1. Calculate bytes needed for a single line
@@ -332,7 +332,7 @@ EspResult<void> Display::fill_rect(uint16_t x0, uint16_t y0, uint16_t w, uint16_
   return ESP_OK;
 }
 
-EspResult<void> Display::clear() {
+EspResult<> Display::clear() {
   return fill_rect(0, 0, config_.width, config_.height, 0);
 }
 
@@ -340,12 +340,12 @@ uint8_t Display::get_backlight() const {
   return 0;
 }
 
-EspResult<void> Display::set_backlight(BacklightState, uint8_t, int) {
+EspResult<> Display::set_backlight(BacklightState, uint8_t, int) {
   return ESP_OK;
 }
 
-EspResult<void> Display::draw_bitmap(int x_start, int y_start, int width, int height,
-                                     const void* color_data, uint32_t /*stride_bytes*/) {
+EspResult<> Display::draw_bitmap(int x_start, int y_start, int width, int height,
+                                 const void* color_data, uint32_t /*stride_bytes*/) {
   if (!panel_handle_) return ESP_ERR_INVALID_STATE;
 
   // Base class expects color_data to be directly compatible with the esp_lcd driver.
@@ -354,10 +354,10 @@ EspResult<void> Display::draw_bitmap(int x_start, int y_start, int width, int he
                                    y_start + height, color_data);
 }
 
-EspResult<void> Display::draw_bitmap_2d(int x_start, int y_start, int width, int height,
-                                        const void* color_data, size_t src_width, size_t src_height,
-                                        int src_x_start, int src_y_start, int src_crop_width,
-                                        int src_crop_height) {
+EspResult<> Display::draw_bitmap_2d(int x_start, int y_start, int width, int height,
+                                    const void* color_data, size_t src_width, size_t src_height,
+                                    int src_x_start, int src_y_start, int src_crop_width,
+                                    int src_crop_height) {
   if (!panel_handle_) return ESP_ERR_INVALID_STATE;
 
   return esp_lcd_panel_draw_bitmap_2d(panel_handle_, x_start, y_start, x_start + width,
@@ -366,9 +366,9 @@ EspResult<void> Display::draw_bitmap_2d(int x_start, int y_start, int width, int
                                       src_y_start + src_crop_height);
 }
 
-EspResult<void> Display::draw_indexed_bitmap(int x_start, int y_start, int width, int height,
-                                             const void* pixel_data, const void* /*palette*/,
-                                             uint32_t stride_bytes) {
+EspResult<> Display::draw_indexed_bitmap(int x_start, int y_start, int width, int height,
+                                         const void* pixel_data, const void* /*palette*/,
+                                         uint32_t stride_bytes) {
   // Default fallback: Ignore the palette and just draw the raw pixel data.
   // Subclasses that need the palette (like multi-color e-Paper) can override this!
   return draw_bitmap(x_start, y_start, width, height, pixel_data, stride_bytes);
