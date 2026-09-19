@@ -16,6 +16,7 @@ static constexpr uint8_t PN532_STARTCODE2 = 0xFF;
 static constexpr uint8_t PN532_POSTAMBLE = 0x00;
 static constexpr uint8_t PN532_HOSTTOPN532 = 0xD4;
 static constexpr uint8_t PN532_PN532TOHOST = 0xD5;
+static constexpr uint32_t PN532_CLOCK_SPEED = 100000;
 static constexpr std::array<uint8_t, 6> PN532_ACK = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
 
 Pn532::~Pn532() {
@@ -27,8 +28,8 @@ EspResult<> Pn532::init_default(uint8_t i2c_address, gpio_num_t irq_pin) {
   if (default_optional()) return ESP_OK;
   Pn532& inst = emplace_default_instance(lock, I2CDevice{}, irq_pin);
 
-  if (EspError err =
-          EspError::check(I2CMaster::instance().add_device(i2c_address), &inst.i2c_dev_)) {
+  if (EspError err = EspError::check(
+          I2CMaster::instance().add_device(i2c_address, PN532_CLOCK_SPEED), &inst.i2c_dev_)) {
     default_optional().reset();
     return err.log(TAG, "Failed to add default PN532 to I2C bus");
   }
@@ -63,7 +64,7 @@ void IRAM_ATTR Pn532::gpio_isr_handler(void* arg) {
   gpio_intr_disable(inst->irq_pin_);
 
   // Post the processing task to the main loop context.
-  main_loop.push<&Pn532::process_tag_response>(inst);
+  main_loop.push<&Pn532::process_tag_response_from_interrupt>(inst);
 }
 
 EspResult<> Pn532::start_passive_target_read() {
@@ -75,10 +76,10 @@ EspResult<> Pn532::start_passive_target_read() {
 
   // 2. Write command
   uint8_t cmd[] = {0x4A, 0x01, 0x00};
-  if (EspError err = write_command(cmd)) return err;
+  if (EspError err = write_command(cmd)) return err.log(TAG, "start_passive_target_read command");
 
   // 3. Read ACK synchronously (takes < 2ms)
-  if (EspError err = read_ack(15)) return err;
+  if (EspError err = read_ack(15)) return err.log(TAG, "start_passive_target_read read_ack");
 
   // 4. Command was accepted. Arm the ISR for the actual tag response!
   scanning_ = true;
@@ -87,16 +88,22 @@ EspResult<> Pn532::start_passive_target_read() {
   return ESP_OK;
 }
 
-void Pn532::process_tag_response() {
+void Pn532::process_tag_response(bool poll_mode) {
   if (!scanning_) return;
-  scanning_ = false;  // Mark complete
 
-  // 1. Verify PN532 is ready via I2C status byte
-  auto status = i2c_dev_.read_byte();
+  // A 10ms timeout is plenty for the ESP32 hardware driver to attempt the read.
+  auto status = i2c_dev_.read_byte(10);
+
   if (!status || *status != 0x01) {
-    ESP_LOGW(TAG, "ISR fired but PN532 I2C ready byte not set");
-    return;
+    if (!poll_mode) {
+      // Only complain if we expected data because the physical IRQ pin dropped
+      ESP_LOGW(TAG, "ISR fired but PN532 I2C ready byte not set");
+    }
+    return;  // Data not ready. Keep scanning_ = true so we can check again.
   }
+
+  // 2. Data is confirmed ready. Now we can safely mark the scan as complete.
+  scanning_ = false;
 
   // 2. Read full response frame safely in task context
   uint8_t response[32] = {0};
@@ -105,21 +112,24 @@ void Pn532::process_tag_response() {
     return;
   }
 
+  ESP_LOGI(TAG, "Tag response -> Len: %02X, TFI: %02X, CMD: %02X, Tags: %02X", response[4],
+           response[6], response[7], response[8]);
+
   // 3. Verify protocol command and tag count
-  if (response[6] != 0x4B || response[7] == 0) return;
+  if (response[7] != 0x4B || response[8] == 0) return;
 
   // 4. Extract UID and fire application callback
-  uint8_t uid_len = response[12];
+  uint8_t uid_len = response[13];
   if (on_tag_cb_ && uid_len <= 7) {
-    on_tag_cb_(on_tag_ctx_, *this, std::span<const uint8_t>(&response[13], uid_len));
+    on_tag_cb_(on_tag_ctx_, *this, std::span<const uint8_t>(&response[14], uid_len));
   }
 }
 
 EspResult<> Pn532::sam_config() {
   uint8_t cmd[] = {0x14, 0x01, 0x14, 0x01};  // SAMConfiguration: Normal Mode
 
-  if (EspError err = write_command(cmd)) return err;
-  if (EspError err = read_ack()) return err;
+  if (EspError err = write_command(cmd)) return err.log(TAG, "sam_config write_command");
+  if (EspError err = read_ack()) return err.log(TAG, "sam_config read_ack");
 
   return ESP_OK;
 }
@@ -145,34 +155,52 @@ EspResult<> Pn532::power_down() {
 }
 
 EspResult<> Pn532::wake_up() {
-  (void)i2c_dev_.read_byte();
-
-  // Waking the oscillator physically requires 5ms. Since wake_up() is a
-  // one-off event, a single 5ms blocking delay is perfectly acceptable.
+  // 1. Dummy ping to wake the oscillator (will intentionally NACK if asleep)
+  (void)i2c_dev_.read_byte(10);
   vTaskDelay(pdMS_TO_TICKS(5));
+
+  // 2. Drain stuck TX buffer from previous crashes
+  // The PN532 returns 0x00 when its buffer is totally empty.
+  // Read until we see 4 consecutive 0x00s to ensure we didn't just hit a 0x00 inside a valid frame.
+  int consecutive_zeros = 0;
+  for (int i = 0; i < 64; i++) {
+    auto val = i2c_dev_.read_byte(10);
+    if (!val) break;  // A NACK means the bus is safely idle
+
+    if (*val == 0x00) {
+      consecutive_zeros++;
+      if (consecutive_zeros >= 4) break;
+    } else {
+      consecutive_zeros = 0;
+    }
+  }
+
+  // 3. Bus is now completely synchronized. Send the configuration.
   return sam_config();
 }
 
 EspResult<> Pn532::get_firmware_version(std::array<uint8_t, 4>& version_out) {
   uint8_t cmd[] = {0x02};  // Command: GetFirmwareVersion
 
-  if (EspError err = write_command(cmd)) return err;
-  if (EspError err = read_ack()) return err;
+  if (EspError err = write_command(cmd)) return err.log(TAG, "firmware write_command");
+  if (EspError err = read_ack()) return err.log(TAG, "firmware read_ack");
+  if (EspError err = wait_ready(100)) return err.log(TAG, "firmware wait_ready");
 
-  // Expected 12 byte response: 1 Status, 6 Preamble/Header, 4 Data, 1 Checksum
-  if (EspError err = wait_ready(100)) return err;
-
-  uint8_t response[12] = {0};
+  // Frame: 1 Status, 1 Preamble, 2 Start, 1 Len, 1 LCS, 1 TFI, 1 CMD, 4 Data, 1 DCS, 1 Post
+  uint8_t response[14] = {0};
   if (EspError err = i2c_dev_.rx(response, 100)) return err;
 
-  // Validate the command response code (0x02 becomes 0x03)
-  if (response[6] != 0x03) return ESP_ERR_INVALID_RESPONSE;
+  // response[6] is TFI (0xD5). response[7] is the Command Code (0x03).
+  if (response[7] != 0x03) {
+    ESP_LOGE(TAG, "expected 0x03, got 0x%02X", response[7]);
+    return ESP_ERR_INVALID_RESPONSE;
+  }
 
-  // Byte 7: IC version (Should be 0x32 for PN532)
-  // Byte 8: Firmware Version
-  // Byte 9: Firmware Revision
-  // Byte 10: Supported features
-  std::copy_n(&response[7], 4, version_out.begin());
+  // Byte 8: IC version (Should be 0x32 for PN532)
+  // Byte 9: Firmware Version
+  // Byte 10: Firmware Revision
+  // Byte 11: Supported features
+  std::copy_n(&response[8], 4, version_out.begin());
 
   return ESP_OK;
 }
@@ -215,7 +243,7 @@ EspResult<> Pn532::write_command(std::span<const uint8_t> cmd) {
   buffer[6 + cmd.size()] = ~sum + 1;  // Data checksum
   buffer[7 + cmd.size()] = PN532_POSTAMBLE;
 
-  return i2c_dev_.transmit(buffer, 8 + cmd.size());
+  return i2c_dev_.transmit(buffer, 8 + cmd.size()).log_error(TAG, "write_command");
 }
 
 }  // namespace halpp

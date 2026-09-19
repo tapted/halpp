@@ -39,6 +39,7 @@ class Pn532 : public DefaultInstance<Pn532> {
   EspResult<> wake_up();
   EspResult<> sam_config();
   EspResult<> get_firmware_version(std::array<uint8_t, 4>& version_out);
+  void poll() { process_tag_response(true); }
 
  private:
   I2CDevice i2c_dev_;
@@ -49,7 +50,8 @@ class Pn532 : public DefaultInstance<Pn532> {
 
   // ISR and Main Loop Thunks
   static void IRAM_ATTR gpio_isr_handler(void* arg);
-  void process_tag_response();
+  void process_tag_response(bool poll_mode);
+  void process_tag_response_from_interrupt() { process_tag_response(false); }
 
   // Protocol Helpers
   EspResult<> wait_ready(uint16_t timeout_ms);
