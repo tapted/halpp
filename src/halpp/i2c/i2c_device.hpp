@@ -35,9 +35,17 @@ class I2CDevice {
   EspResult<void> transmit_receive(const uint8_t* tx_data, size_t tx_length, uint8_t* rx_data,
                                    size_t rx_length, int timeout_ms = 1000);
 
+  // Calls i2c_master_receive(), or returns ESP_ERR_INVALID_STATE if !handle_;
+  EspResult<void> receive(uint8_t* rx_data, size_t rx_length, int timeout_ms = 1000);
+
   template <size_t N>
   EspResult<void> tx(const uint8_t (&data)[N], int timeout_ms = 1000) {
     return transmit(data, N, timeout_ms);
+  }
+
+  template <size_t N>
+  EspResult<void> rx(uint8_t (&data)[N], int timeout_ms = 1000) {
+    return receive(data, N, timeout_ms);
   }
 
   template <size_t TN, size_t RN>
@@ -60,6 +68,13 @@ class I2CDevice {
   template <size_t N>
   EspResult<void> read_reg(uint8_t reg, uint8_t (&data)[N], int timeout_ms = 1000) {
     return txrx({reg}, data, timeout_ms);
+  }
+
+  EspResult<uint8_t> read_byte(int timeout_ms = 1000) {
+    uint8_t rx_buf[1] = {0};
+    esp_err_t err = receive(rx_buf, 1, timeout_ms).error();
+    if (err != ESP_OK) return err;
+    return rx_buf[0];
   }
 
   EspResult<uint8_t> read_reg(uint8_t reg, int timeout_ms = 1000) {

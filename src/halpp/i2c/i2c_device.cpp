@@ -25,6 +25,11 @@ EspResult<void> I2CDevice::transmit(const uint8_t* data, size_t length, int time
   return i2c_master_transmit(handle_, data, length, timeout_ms);
 }
 
+EspResult<void> I2CDevice::receive(uint8_t* data, size_t length, int timeout_ms) {
+  if (!handle_) return ESP_ERR_INVALID_STATE;
+  return i2c_master_receive(handle_, data, length, timeout_ms);
+}
+
 EspResult<void> I2CDevice::transmit_receive(const uint8_t* tx_data, size_t tx_length,
                                             uint8_t* rx_data, size_t rx_length, int timeout_ms) {
   if (!handle_) return ESP_ERR_INVALID_STATE;
