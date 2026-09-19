@@ -14,24 +14,25 @@ I2CDevice& I2CDevice::operator=(I2CDevice&& other) noexcept {
   return *this;
 }
 
-EspResult<void> I2CDevice::reset() {
+EspResult<> I2CDevice::reset() {
   i2c_master_dev_handle_t handle = handle_;
   handle_ = nullptr;
   return handle ? i2c_master_bus_rm_device(handle) : ESP_OK;
 }
 
-EspResult<void> I2CDevice::transmit(const uint8_t* data, size_t length, int timeout_ms) {
+EspResult<> I2CDevice::tx(std::span<const uint8_t> data, int timeout_ms) {
   if (!handle_) return ESP_ERR_INVALID_STATE;
-  return i2c_master_transmit(handle_, data, length, timeout_ms);
+  return i2c_master_transmit(handle_, data.data(), data.size(), timeout_ms);
 }
 
-EspResult<void> I2CDevice::receive(uint8_t* data, size_t length, int timeout_ms) {
+EspResult<> I2CDevice::rx(std::span<uint8_t> data, int timeout_ms) {
   if (!handle_) return ESP_ERR_INVALID_STATE;
-  return i2c_master_receive(handle_, data, length, timeout_ms);
+  return i2c_master_receive(handle_, data.data(), data.size(), timeout_ms);
 }
 
-EspResult<void> I2CDevice::transmit_receive(const uint8_t* tx_data, size_t tx_length,
-                                            uint8_t* rx_data, size_t rx_length, int timeout_ms) {
+EspResult<> I2CDevice::txrx(std::span<const uint8_t> tx_data, std::span<uint8_t> rx_data,
+                            int timeout_ms) {
   if (!handle_) return ESP_ERR_INVALID_STATE;
-  return i2c_master_transmit_receive(handle_, tx_data, tx_length, rx_data, rx_length, timeout_ms);
+  return i2c_master_transmit_receive(handle_, tx_data.data(), tx_data.size(), rx_data.data(),
+                                     rx_data.size(), timeout_ms);
 }

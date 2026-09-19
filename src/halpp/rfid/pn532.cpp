@@ -7,6 +7,25 @@
 #include "espbase/main_loop.hpp"
 #include "halpp/i2c/i2c_master.hpp"
 
+/*
+ * =======================================================================================
+ * PN532 I2C RESPONSE FRAME ARCHITECTURE
+ * =======================================================================================
+ * Note: When reading over I2C, the PN532 physically prepends a 0x01 "Ready" status byte
+ * to the beginning of the transmission. This shifts the standard NXP frame right by 1.
+ *
+ * INDEX | 0    | 1    | 2    | 3    | 4    | 5    | 6    | 7    | 8...       |   |   |
+ * ------|------|------|-------------|------|------|------|------|------------|---|---|
+ * BYTE  | 0x01 | 0x00 | 0x00 | 0xFF | LEN  | LCS  | 0xD5 | CMD  | DATA       |DCS|00 |
+ * ------|------|------|-------------|------|------|------|------|------------|---|---|
+ * FIELD | I2C  | PRE  | START CODES | LENG | LCHK | TFI  | CODE | PAYLOAD... |CHK|PST|
+ *       | RDY  | AMBL |             | TH   | SUM  |      |      |            |   |   |
+ *
+ * TFI: 0xD5 = PN532 to Host
+ * CMD: Command Code (Original Host Command + 1)
+ * =======================================================================================
+ */
+
 namespace halpp {
 
 static constexpr const char TAG[] = "halpp::PN532";
@@ -75,11 +94,8 @@ EspResult<> Pn532::start_passive_target_read() {
   scanning_ = false;
 
   // 2. Write command
-  uint8_t cmd[] = {0x4A, 0x01, 0x00};
-  if (EspError err = write_command(cmd)) return err.log(TAG, "start_passive_target_read command");
-
-  // 3. Read ACK synchronously (takes < 2ms)
-  if (EspError err = read_ack(15)) return err.log(TAG, "start_passive_target_read read_ack");
+  constexpr uint8_t cmd[] = {0x4A, 0x01, 0x00};
+  if (EspError err = command(cmd)) return err.log(TAG, "start_passive_target_read command");
 
   // 4. Command was accepted. Arm the ISR for the actual tag response!
   scanning_ = true;
@@ -126,32 +142,13 @@ void Pn532::process_tag_response(bool poll_mode) {
 }
 
 EspResult<> Pn532::sam_config() {
-  uint8_t cmd[] = {0x14, 0x01, 0x14, 0x01};  // SAMConfiguration: Normal Mode
-
-  if (EspError err = write_command(cmd)) return err.log(TAG, "sam_config write_command");
-  if (EspError err = read_ack()) return err.log(TAG, "sam_config read_ack");
-
-  return ESP_OK;
-}
-
-EspResult<> Pn532::read_ack(uint16_t timeout_ms) {
-  if (EspError err = wait_ready(timeout_ms)) return err;
-
-  uint8_t buffer[7] = {0};
-  if (EspError err = i2c_dev_.rx(buffer)) return err;
-
-  for (int i = 0; i < 6; i++) {
-    if (buffer[i + 1] != PN532_ACK[i]) return ESP_ERR_INVALID_RESPONSE;
-  }
-  return ESP_OK;
+  // SAMConfiguration: Normal Mode, enable IRQ.
+  return command({0x14, 0x01, 0x14, 0x01}).log_error(TAG, "sam_config");
 }
 
 EspResult<> Pn532::power_down() {
-  uint8_t cmd[] = {0x16, 0x00};  // Command: PowerDown, Param: Wake on any interface
-  if (EspError err = write_command(cmd)) return err;
-
   // Acknowledge the command. After this ACK, the PN532 halts the RF field and sleeps.
-  return read_ack();
+  return command({0x16, 0x00}).log_error(TAG, "power_down");
 }
 
 EspResult<> Pn532::wake_up() {
@@ -180,21 +177,9 @@ EspResult<> Pn532::wake_up() {
 }
 
 EspResult<> Pn532::get_firmware_version(std::array<uint8_t, 4>& version_out) {
-  uint8_t cmd[] = {0x02};  // Command: GetFirmwareVersion
-
-  if (EspError err = write_command(cmd)) return err.log(TAG, "firmware write_command");
-  if (EspError err = read_ack()) return err.log(TAG, "firmware read_ack");
-  if (EspError err = wait_ready(100)) return err.log(TAG, "firmware wait_ready");
-
-  // Frame: 1 Status, 1 Preamble, 2 Start, 1 Len, 1 LCS, 1 TFI, 1 CMD, 4 Data, 1 DCS, 1 Post
+  if (EspError err = command({0x02})) return err.log(TAG, "firmware command");
   uint8_t response[14] = {0};
-  if (EspError err = i2c_dev_.rx(response, 100)) return err;
-
-  // response[6] is TFI (0xD5). response[7] is the Command Code (0x03).
-  if (response[7] != 0x03) {
-    ESP_LOGE(TAG, "expected 0x03, got 0x%02X", response[7]);
-    return ESP_ERR_INVALID_RESPONSE;
-  }
+  if (EspError err = read_response(0x03, response, 100)) return err.log(TAG, "firmware response");
 
   // Byte 8: IC version (Should be 0x32 for PN532)
   // Byte 9: Firmware Version
@@ -243,7 +228,80 @@ EspResult<> Pn532::write_command(std::span<const uint8_t> cmd) {
   buffer[6 + cmd.size()] = ~sum + 1;  // Data checksum
   buffer[7 + cmd.size()] = PN532_POSTAMBLE;
 
-  return i2c_dev_.transmit(buffer, 8 + cmd.size()).log_error(TAG, "write_command");
+  return i2c_dev_.tx(std::span(buffer, 8 + cmd.size())).log_error(TAG, "write_command");
+}
+
+EspResult<> Pn532::read_ack(uint16_t timeout_ms) {
+  if (EspError err = wait_ready(timeout_ms)) return err;
+
+  uint8_t buffer[7] = {0};
+  if (EspError err = i2c_dev_.rx(buffer)) return err;
+
+  for (int i = 0; i < 6; i++) {
+    if (buffer[i + 1] != PN532_ACK[i]) return ESP_ERR_INVALID_RESPONSE;
+  }
+  return ESP_OK;
+}
+
+EspResult<> Pn532::command(std::span<const uint8_t> cmd, uint16_t timeout_ms) {
+  if (EspError err = write_command(cmd)) return err;
+  return read_ack(timeout_ms);
+}
+
+EspResult<> Pn532::read_response(uint8_t expected_cmd, std::span<uint8_t> response,
+                                 uint16_t timeout_ms) {
+  if (EspError err = wait_ready(timeout_ms)) return err;
+  if (EspError err = i2c_dev_.rx(response, timeout_ms)) return err;
+
+  // 1. Validate the rigid NXP frame structure (Preamble, Start Codes, and TFI)
+  if (response[1] != 0x00 || response[2] != 0x00 || response[3] != 0xFF || response[6] != 0xD5) {
+    ESP_LOGW(TAG, "Malformed PN532 frame. PRE: %02X, ST1: %02X, ST2: %02X, TFI: %02X", response[1],
+             response[2], response[3], response[6]);
+    return ESP_ERR_INVALID_RESPONSE;
+  }
+
+  // 2. Validate the specific command response
+  if (response[7] != expected_cmd) {
+    ESP_LOGW(TAG, "Command mismatch. Expected 0x%02X, Got 0x%02X", expected_cmd, response[7]);
+    return ESP_ERR_INVALID_RESPONSE;
+  }
+
+  // (Optional) You could also validate the Length (response[4]) and Checksums here!
+
+  return ESP_OK;
 }
 
 }  // namespace halpp
+
+/**
+ * NXP PN532 Command Reference
+ * | Command (Hex) | Name | Response (Hex) | Description |
+ * | --- | --- | --- | --- |
+ * | **`0x00`** | `Diagnose` | **`0x01`** | Run self-tests and communication line diagnostics. |
+ * | **`0x02`** | `GetFirmwareVersion` | **`0x03`** | Returns IC identifier, version, and protocol support mask. |
+ * | **`0x04`** | `GetGeneralStatus` | **`0x05`** | Returns current SAM state, field status, and tag memory limits. |
+ * | **`0x06`** | `ReadRegister` | **`0x07`** | Read internal 8051 CPU registers or GPIO states. |
+ * | **`0x08`** | `WriteRegister` | **`0x09`** | Write to internal 8051 CPU registers or GPIO pins. |
+ * | **`0x0C`** | `ReadGPIO` | **`0x0D`** | Read hardware states of the P3 / P7 auxiliary pins. |
+ * | **`0x0E`** | `WriteGPIO` | **`0x0F`** | Set hardware states of the P3 / P7 auxiliary pins. |
+ * | **`0x10`** | `SetSerialBaudRate` | **`0x11`** | Change UART baud rate (Ignored over I2C). |
+ * | **`0x12`** | `SetParameters` | **`0x13`** | Toggle automatic RF behaviors (e.g., auto-removing parity bits). |
+ * | **`0x14`** | `SAMConfiguration` | **`0x15`** | Configure Secure Access Module, enable RF field, and route IRQ pin. |
+ * | **`0x16`** | `PowerDown` | **`0x17`** | Put chip into deep sleep (Requires `WUP` packet to wake). |
+ * | **`0x32`** | `InJumpForDEP` | **`0x33`** | Initiator: Configure NFC Peer-to-Peer mode setup. |
+ * | **`0x40`** | `InDataExchange` | **`0x41`** | Initiator: Read/Write data blocks on a currently selected tag. |
+ * | **`0x42`** | `InCommunicateThru` | **`0x43`** | Initiator: Send raw low-level RF transmission (bypassing protocol). |
+ * | **`0x44`** | `InDeselect` | **`0x45`** | Initiator: Put the currently communicating tag back to sleep. |
+ * | **`0x46`** | `InRelease` | **`0x47`** | Initiator: Completely release the current tag from memory. |
+ * | **`0x48`** | `InSelect` | **`0x49`** | Initiator: Wake up a specific sleeping tag in the RF field. |
+ * | **`0x4A`** | `InListPassiveTarget` | **`0x4B`** | Initiator: Poll the RF field for new tags and retrieve their UIDs. |
+ * | **`0x50`** | `InAutoPoll` | **`0x51`** | Initiator: Continuously loop polling for multiple tag frequencies. |
+ * | **`0x8C`** | `TgInitAsTarget` | **`0x8D`** | Target: Emulate a physical tag (Card Emulation mode). |
+ * | **`0x8E`** | `TgSetGeneralBytes` | **`0x8F`** | Target: Set payload data for NFC Peer-to-Peer targets. |
+ * | **`0x90`** | `TgGetData` | **`0x91`** | Target: Receive an incoming payload from an Initiator reader. |
+ * | **`0x92`** | `TgSetData` | **`0x93`** | Target: Send a payload out to the Initiator reader. |
+ * | **`0x94`** | `TgSetMetaData` | **`0x95`** | Target: Configure Card Emulation parameters. |
+ * | **`0x96`** | `TgGetInitiatorCommand` | **`0x97`** | Target: Read raw incoming RF command. |
+ * | **`0x98`** | `TgResponseToInitiator` | **`0x99`** | Target: Send raw outgoing RF response. |
+ * | **`0x9A`** | `TgGetTargetStatus` | **`0x9B`** | Target: Check active connection state to the Initiator. |
+ */

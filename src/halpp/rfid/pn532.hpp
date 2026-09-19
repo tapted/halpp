@@ -57,6 +57,12 @@ class Pn532 : public DefaultInstance<Pn532> {
   EspResult<> wait_ready(uint16_t timeout_ms);
   EspResult<> write_command(std::span<const uint8_t> cmd);
   EspResult<> read_ack(uint16_t timeout_ms = 15);
+
+  EspResult<> command(std::span<const uint8_t> cmd, uint16_t timeout_ms = 15);
+
+  // Blocks until ready, reads the frame, and rigorously validates the NXP protocol headers.
+  EspResult<> read_response(uint8_t expected_cmd, std::span<uint8_t> response,
+                            uint16_t timeout_ms = 100);
 };
 
 }  // namespace halpp
