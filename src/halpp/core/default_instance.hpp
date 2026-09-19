@@ -31,6 +31,12 @@ class DefaultInstance {
     return instance.init();
   }
 
+  static EspResult<> init_default() {
+    // Overload to support constructors that take default arguments (which break forwarding).
+    std::lock_guard<std::mutex> lock(default_mutex());
+    return emplace_default_instance(lock).init();
+  }
+
   // The instance (unguarded) - caller must ensure it is initialized before use.
   static T& default_instance() { return *default_optional(); }
 
