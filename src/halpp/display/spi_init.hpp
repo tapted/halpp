@@ -41,7 +41,7 @@ EspResult<Display::Config> init_spi_display(Display* instance) {
   }
 
   esp_lcd_panel_io_spi_config_t io_config = {
-      .cs_gpio_num = config::SpiBus::PIN_CHIP_SELECT,
+      .cs_gpio_num = config::Display::PIN_CHIP_SELECT,
       .dc_gpio_num = config::Display::PIN_DATA_COMMAND,
       .spi_mode = 0,
       .pclk_hz = config::SpiBus::SPI_CLK_WRITE_HZ,

@@ -29,7 +29,6 @@ struct SharedDefaults {
     static constexpr spi_host_device_t SPI_HOST = SPI2_HOST;
     static constexpr uint32_t SPI_CLK_WRITE_HZ = 80 * 1000 * 1000;  // 80MHz for write
 
-    static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_NC;   // Chip Select (CS)
     static constexpr gpio_num_t PIN_SERIAL_CLOCK = GPIO_NUM_NC;  // Serial Clock (SCK)
 
     // Serial Interface Data
@@ -63,6 +62,7 @@ struct SharedDefaults {
     static constexpr uint16_t WIDTH = 128;
     static constexpr uint16_t HEIGHT = 64;
 
+    static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_NC;     // SPI Chip Select (CS)
     static constexpr gpio_num_t PIN_TEARING_EFFECT = GPIO_NUM_NC;  // Tearing Effect (TE)
     static constexpr gpio_num_t PIN_DATA_COMMAND = GPIO_NUM_NC;    // Data/Command (DC)
     static constexpr gpio_num_t PIN_RESET = GPIO_NUM_NC;           // Reset (RST)
@@ -162,7 +162,6 @@ struct SharedDefaults {
 #if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32
 struct Defaults : public SharedDefaults {
   struct SpiBus : public SharedDefaults::SpiBus {
-    static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_21;
     static constexpr gpio_num_t PIN_SERIAL_CLOCK = GPIO_NUM_40;
 
     // Data Lanes
@@ -170,6 +169,9 @@ struct Defaults : public SharedDefaults {
     static constexpr gpio_num_t PIN_QSPI_SDA_1 = GPIO_NUM_45;
     static constexpr gpio_num_t PIN_QSPI_SDA_2 = GPIO_NUM_42;
     static constexpr gpio_num_t PIN_QSPI_SDA_3 = GPIO_NUM_41;
+  };
+  struct Display : public SharedDefaults::Display {
+    static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_21;
   };
   struct Usb : public SharedDefaults::Usb {
     static constexpr gpio_num_t PIN_USB_DM = GPIO_NUM_19;
@@ -207,7 +209,6 @@ struct Defaults : public SharedDefaults {
     static constexpr gpio_num_t PIN_BOOT = GPIO_NUM_9;  // C6 uses 9, not 0.
   };
   struct SpiBus : public SharedDefaults::SpiBus {
-    static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_14;
     static constexpr gpio_num_t PIN_SERIAL_CLOCK = GPIO_NUM_7;
     static constexpr gpio_num_t PIN_MISO = GPIO_NUM_5;  // Shared with SdCard
     static constexpr gpio_num_t PIN_MOSI = GPIO_NUM_6;
@@ -221,6 +222,7 @@ struct Defaults : public SharedDefaults {
     static constexpr gpio_num_t PIN_SCL = GPIO_NUM_19;
   };
   struct Display : public SharedDefaults::Display {
+    static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_14;
     static constexpr gpio_num_t PIN_DATA_COMMAND = GPIO_NUM_15;
     static constexpr gpio_num_t PIN_RESET = GPIO_NUM_21;
     static constexpr gpio_num_t PIN_BACKLIGHT_PWM = GPIO_NUM_22;
@@ -243,7 +245,6 @@ struct Defaults : public SharedDefaults {
     static constexpr gpio_num_t PIN_BOOT = GPIO_NUM_9;  // C3 uses 9, not 0.
   };
   struct SpiBus : public SharedDefaults::SpiBus {
-    static constexpr gpio_num_t PIN_CHIP_SELECT = GPIO_NUM_NC;
     static constexpr gpio_num_t PIN_SERIAL_CLOCK = GPIO_NUM_8;
     static constexpr gpio_num_t PIN_MISO = GPIO_NUM_9;
     static constexpr gpio_num_t PIN_MOSI = GPIO_NUM_10;
