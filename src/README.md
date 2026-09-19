@@ -86,25 +86,66 @@ Constructors **cannot return errors**. Therefore, no hardware transactions (like
 
 Many hardware components (like a specific RTC or a primary display) are often the *only* component of their type on a board. To support multi-device chaining without forcing users to pass objects everywhere, implement the "Default Instance" pattern.
 
-* Provide standard constructors for multi-device support.
-* Provide a static `default_instance()` method returning a singleton.
-* Provide static `init_default()` and `deinit_default()` wrappers.
+To ensure strict thread-safety during initialization and eliminate `std::optional` boilerplate, `halpp` requires inheriting from the `DefaultInstance<T>` CRTP (Curiously Recurring Template Pattern) base class. This base class automatically provides thread-safe accessors (`default_instance()`, `is_default_initialized()`) and a robust `deinit_default()` method that safely unwinds your hardware state by calling your class's `reset()` method.
 
-**Example:**
+**Implementation Patterns**
+Depending on how your underlying ESP-IDF driver allocates memory, you must use one of the two protected initialization pathways provided by the base class:
+
+| Initialization Pattern | Protected Base Method | Best Use Case |
+| --- | --- | --- |
+| **Emplace (Two-Stage)** | `emplace_default_instance(args...)` | When a class can be constructed as an empty shell, followed by a `.begin()` call to execute hardware transactions (e.g., `Display`). |
+| **Factory (Opaque Handle)** | `set_default_instance(T&&)` | When the native IDF driver allocates an opaque handle and returns it, requiring you to `std::move` a fully formed object into the singleton (e.g., `LedStrip::create_rmt`). |
+
+**Example (Factory Pattern):**
 
 ```cpp
-class I2C7Seg {
+#include "halpp/core/default_instance.hpp"
+
+class LedStrip : public DefaultInstance<LedStrip> {
 public:
+  constexpr LedStrip() = default;
+  
+  // The base class deinit_default() will automatically route to this method
+  EspResult<void> reset(); 
+
   // Standard Multi-Device Constructor
-  explicit I2C7Seg(I2CDevice device = I2CDevice{}) : i2c_dev_(std::move(device)) {}
+  static EspResult<LedStrip> create_rmt(const RmtConfig& config);
+
+  // Single-Device Default Optimization
+  static EspResult<void> init_default(const RmtConfig& config) {
+    if (is_default_initialized()) return ESP_ERR_INVALID_STATE;
+
+    EspResult<LedStrip> result = create_rmt(config);
+    if (!result) return result; // Propagate creation errors
+
+    // Thread-safely move the hardware handle into the CRTP singleton
+    return set_default_instance(std::move(*result));
+  }
+};
+
+```
+
+**Example (Emplace Pattern):**
+
+```cpp
+#include "halpp/core/default_instance.hpp"
+
+class Display : public DefaultInstance<Display> {
+public:
+  // Stage 1: Construct empty shell
+  Display() = default;
+  
+  // Stage 2: Hardware init
   EspResult<void> begin();
 
   // Single-Device Default Optimization
-  static I2C7Seg& default_instance() {
-    static I2C7Seg inst;
-    return inst;
+  static EspResult<void> init_default() {
+    // Thread-safely construct the shell in place (or fetch if it exists)
+    auto& inst = emplace_default_instance();
+    if (inst.is_initialized()) return ESP_OK;
+
+    return inst.begin();
   }
-  static EspResult<void> init_default(uint8_t i2c_address = 0x70);
 };
 
 ```
