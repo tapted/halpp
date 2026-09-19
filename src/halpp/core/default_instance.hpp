@@ -34,12 +34,6 @@ class DefaultInstance {
   // The instance (unguarded) - caller must ensure it is initialized before use.
   static T& default_instance() { return *default_optional(); }
 
-  // Threadsafe initialization check for sites doing setup/teardown.
-  static bool is_default_initialized() {
-    std::lock_guard<std::mutex> lock(default_mutex());
-    return default_optional().has_value();
-  }
-
   // Default RAII cleanup. Derived classes can shadow this if they need to return
   // hardware error codes during shutdown (e.g., returning the result of a reset).
   static EspResult<> deinit_default() {
@@ -56,8 +50,7 @@ class DefaultInstance {
   constexpr DefaultInstance() = default;
 
   // Path A: Factory Initialization (e.g., LedStrip::create_rmt -> std::move)
-  static EspResult<> set_default_instance(T&& obj) {
-    std::lock_guard<std::mutex> lock(default_mutex());
+  static EspResult<> set_default_instance(std::lock_guard<std::mutex>&, T&& obj) {
     if (default_optional()) return ESP_ERR_INVALID_STATE;
     ShutdownRegistry::register_fn(
         [] { T::deinit_default().log_error("default_instance", __PRETTY_FUNCTION__); });

@@ -6,13 +6,14 @@
 
 #include "espbase/esp_result.hpp"
 #include "halpp/config.hpp"
+#include "halpp/core/default_instance.hpp"
 #include "halpp/i2c/i2c_device.hpp"
 
 struct tm;
 
 namespace halpp {
 
-class I2C7Seg {
+class I2C7Seg : public DefaultInstance<I2C7Seg> {
  public:
   enum class BlinkRate : uint8_t { Off = 0, Hz_2 = 1, Hz_1 = 2, Half_Hz = 3 };
 
@@ -21,30 +22,19 @@ class I2C7Seg {
   explicit I2C7Seg(I2CDevice device = I2CDevice{}) : i2c_dev_(std::move(device)) {}
 
   // Executes hardware initialization over I2C. MUST be called after construction.
-  EspResult<void> begin();
-
-  // --- Pattern 2: Single-Display Default ---
-  // Optimizes for the common case of a single display connected to the bus.
-  static I2C7Seg& default_instance() {
-    static I2C7Seg inst;
-    return inst;
-  }
+  EspResult<> begin();
 
   // Initializes the default instance and attaches it to the bus
-  static EspResult<void> init_default(
-      uint8_t i2c_address = halpp::config::Display7Seg::I2C_ADDRESS);
-
-  // Releases the device handle for the default instance
-  static EspResult<void> deinit_default();
+  static EspResult<> init_default(uint8_t i2c_address = halpp::config::Display7Seg::I2C_ADDRESS);
 
   // --- Display Operations ---
   bool is_initialized() const { return !!i2c_dev_; }
 
-  EspResult<void> set_brightness(uint8_t b);
-  EspResult<void> set_blink_rate(BlinkRate rate);
-  EspResult<void> set_display_state(bool on);
+  EspResult<> set_brightness(uint8_t b);
+  EspResult<> set_blink_rate(BlinkRate rate);
+  EspResult<> set_display_state(bool on);
 
-  EspResult<void> write_display();
+  EspResult<> write_display();
   void clear();
 
   void write_digit_raw(uint8_t digit, uint8_t bitmask);

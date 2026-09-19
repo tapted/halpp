@@ -86,7 +86,7 @@ Constructors **cannot return errors**. Therefore, no hardware transactions (like
 
 Many hardware components (like a specific RTC or a primary display) are often the *only* component of their type on a board. To support multi-device chaining without forcing users to pass objects everywhere, implement the "Default Instance" pattern.
 
-To ensure strict thread-safety during initialization and eliminate `std::optional` boilerplate, `halpp` requires inheriting from the `DefaultInstance<T>` CRTP (Curiously Recurring Template Pattern) base class. This base class automatically provides thread-safe accessors (`default_instance()`, `is_default_initialized()`) and a robust `deinit_default()` method that safely unwinds your hardware state by calling your class's `reset()` method.
+To ensure strict thread-safety during initialization and eliminate `std::optional` boilerplate, `halpp` requires inheriting from the `DefaultInstance<T>` CRTP (Curiously Recurring Template Pattern) base class. This base class automatically a robust `deinit_default()` method that safely unwinds your hardware state by calling your class's `reset()` method.
 
 **Implementation Patterns**
 Depending on how your underlying ESP-IDF driver allocates memory, you must use one of the two protected initialization pathways provided by the base class:
@@ -113,7 +113,8 @@ public:
 
   // Single-Device Default Optimization
   static EspResult<void> init_default(const RmtConfig& config) {
-    if (is_default_initialized()) return ESP_ERR_INVALID_STATE;
+    std::lock_guard<std::mutex> lock(default_mutex());
+    if (default_optional().has_value()) return ESP_ERR_INVALID_STATE;
 
     EspResult<LedStrip> result = create_rmt(config);
     if (!result) return result; // Propagate creation errors

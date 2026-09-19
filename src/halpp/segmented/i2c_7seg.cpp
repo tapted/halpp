@@ -30,26 +30,22 @@ static constexpr std::array<uint8_t, 96> kSevenSegFontTable = {
     0b01110110, 0b01101110, 0b01011011, 0b01000110, 0b00110000, 0b01110000, 0b00000001, 0b00000000,
 };
 
-EspResult<void> I2C7Seg::init_default(uint8_t i2c_address) {
-  auto& inst = default_instance();
-  if (inst.is_initialized()) return ESP_OK;
+EspResult<> I2C7Seg::init_default(uint8_t i2c_address) {
+  std::lock_guard<std::mutex> lock(default_mutex());
+  if (default_optional()) return ESP_OK;
+  I2C7Seg& inst = emplace_default_instance(lock);
 
   // The rvalue check neatly consumes the temporary EspResult and moves the handle
   if (EspError err =
           EspError::check(I2CMaster::instance().add_device(i2c_address), &inst.i2c_dev_)) {
+    default_optional().reset();
     return err.log(TAG, "Failed to add default HT16K33 to I2C bus");
   }
 
   return inst.begin();
 }
 
-EspResult<void> I2C7Seg::deinit_default() {
-  auto& inst = default_instance();
-  if (!inst.is_initialized()) return ESP_OK;
-  return inst.i2c_dev_.reset();
-}
-
-EspResult<void> I2C7Seg::begin() {
+EspResult<> I2C7Seg::begin() {
   if (!i2c_dev_) return ESP_ERR_INVALID_STATE;
 
   // 0x21 turns on the internal oscillator
@@ -63,23 +59,23 @@ EspResult<void> I2C7Seg::begin() {
   return set_brightness(15);
 }
 
-EspResult<void> I2C7Seg::set_brightness(uint8_t b) {
+EspResult<> I2C7Seg::set_brightness(uint8_t b) {
   b = std::min<uint8_t>(b, 15);
   uint8_t cmd = 0xE0 | b;
   return i2c_dev_.tx({cmd});
 }
 
-EspResult<void> I2C7Seg::set_blink_rate(BlinkRate rate) {
+EspResult<> I2C7Seg::set_blink_rate(BlinkRate rate) {
   uint8_t cmd = 0x80 | 0x01 | (static_cast<uint8_t>(rate) << 1);
   return i2c_dev_.tx({cmd});
 }
 
-EspResult<void> I2C7Seg::set_display_state(bool on) {
+EspResult<> I2C7Seg::set_display_state(bool on) {
   uint8_t cmd = 0x80 | (on ? 0x01 : 0x00);
   return i2c_dev_.tx({cmd});
 }
 
-EspResult<void> I2C7Seg::write_display() {
+EspResult<> I2C7Seg::write_display() {
   uint8_t buffer[17] = {0};
   for (size_t i = 0; i < 8; i++) {
     buffer[1 + 2 * i] = display_buffer_[i] & 0xFF;
