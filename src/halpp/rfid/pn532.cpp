@@ -42,10 +42,10 @@ Pn532::~Pn532() {
   if (irq_pin_ != GPIO_NUM_NC) gpio_isr_handler_remove(irq_pin_);
 }
 
-EspResult<> Pn532::init_default(uint8_t i2c_address, gpio_num_t irq_pin) {
+EspResult<> Pn532::init_default(uint8_t i2c_address, gpio_num_t irq_pin, gpio_num_t rstpdn_pin) {
   std::lock_guard<std::mutex> lock(default_mutex());
   if (default_optional()) return ESP_OK;
-  Pn532& inst = emplace_default_instance(lock, I2CDevice{}, irq_pin);
+  Pn532& inst = emplace_default_instance(lock, I2CDevice{}, irq_pin, rstpdn_pin);
 
   if (EspError err = EspError::check(
           I2CMaster::instance().add_device(i2c_address, PN532_CLOCK_SPEED), &inst.i2c_dev_)) {
@@ -54,6 +54,28 @@ EspResult<> Pn532::init_default(uint8_t i2c_address, gpio_num_t irq_pin) {
   }
 
   return inst.begin();
+}
+
+EspResult<> Pn532::hardware_reset() {
+  if (rstpdn_pin_ == GPIO_NUM_NC) return ESP_ERR_NOT_SUPPORTED;
+
+  // Configure pin if not done already
+  gpio_reset_pin(rstpdn_pin_);
+  gpio_set_direction(rstpdn_pin_, GPIO_MODE_OUTPUT);
+
+  gpio_hold_dis(rstpdn_pin_);  // Ensure it's not held from a prior light-sleep prevention.
+
+  gpio_set_level(rstpdn_pin_, 0);
+  vTaskDelay(pdMS_TO_TICKS(10));
+
+  // Pull HIGH to boot up
+  gpio_set_level(rstpdn_pin_, 1);
+  vTaskDelay(pdMS_TO_TICKS(10));
+
+  gpio_hold_en(rstpdn_pin_);  // Keep the device alive during light sleep.
+
+  // Re-initialize the chip state
+  return wake_up();
 }
 
 EspResult<> Pn532::begin() {
@@ -65,14 +87,20 @@ EspResult<> Pn532::begin() {
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE  // Keep disabled until we actually scan
+        .intr_type = GPIO_INTR_NEGEDGE  // Fire when the line drops LOW
     };
     gpio_config(&io_conf);
 
-    // Assumes the global ISR service is started elsewhere in espbase/halpp
+    gpio_install_isr_service(0);
     gpio_isr_handler_add(irq_pin_, gpio_isr_handler, this);
   }
 
+  if (rstpdn_pin_ != GPIO_NUM_NC) {
+    ESP_LOGI(TAG, "Hardware Reset pin configured. Power-cycling PN532...");
+    return hardware_reset();
+  }
+
+  ESP_LOGW(TAG, "No Reset pin configured. Relying on software wake-up.");
   return wake_up();
 }
 
@@ -104,41 +132,52 @@ EspResult<> Pn532::start_passive_target_read() {
   return ESP_OK;
 }
 
-void Pn532::process_tag_response(bool poll_mode) {
-  if (!scanning_) return;
+EspResult<> Pn532::process_tag_response(bool poll_mode) {
+  if (!scanning_) return ESP_ERR_INVALID_STATE;
 
   // A 10ms timeout is plenty for the ESP32 hardware driver to attempt the read.
   auto status = i2c_dev_.read_byte(10);
 
-  if (!status || *status != 0x01) {
-    if (!poll_mode) {
-      // Only complain if we expected data because the physical IRQ pin dropped
-      ESP_LOGW(TAG, "ISR fired but PN532 I2C ready byte not set");
+  if (!status) {  // I2C hardware error (timeout, bus locked, etc.)
+    consecutive_fails_++;
+
+    // If we fail 10 times in a row (~500ms of polling), the bus is dead.
+    if (consecutive_fails_ >= 10 && rstpdn_pin_ != GPIO_NUM_NC) {
+      ESP_LOGE(TAG, "I2C Deadlock detected! Executing hardware reset via RSTPDN pin...");
+
+      hardware_reset();
+      start_passive_target_read();  // Restart the background scan.
+
+      consecutive_fails_ = 0;  // Reset the counter
+    } else if (!poll_mode) {
+      ESP_LOGW(TAG, "I2C read failed. Consecutive errors: %d", consecutive_fails_);
     }
-    return;  // Data not ready. Keep scanning_ = true so we can check again.
+    return status.strip().log_error(TAG, "process_tag_response status");
   }
 
-  // 2. Data is confirmed ready. Now we can safely mark the scan as complete.
+  // A successful I2C read happened (even if it's just a 0x00 "Not Ready" byte)
+  consecutive_fails_ = 0;
+  if (*status != 0x01) return ESP_ERR_INVALID_STATE;
+
+  // Data is confirmed ready. Now we can safely mark the scan as complete.
   scanning_ = false;
 
-  // 2. Read full response frame safely in task context
+  // Read full response frame safely in task context
   uint8_t response[32] = {0};
-  if (EspError err = i2c_dev_.rx(response)) {
-    err.log(TAG, "Failed to read PN532 response frame");
-    return;
-  }
+  if (EspError err = i2c_dev_.rx(response)) return err.log(TAG, "process_tag_response");
 
   ESP_LOGI(TAG, "Tag response -> Len: %02X, TFI: %02X, CMD: %02X, Tags: %02X", response[4],
            response[6], response[7], response[8]);
 
-  // 3. Verify protocol command and tag count
-  if (response[7] != 0x4B || response[8] == 0) return;
+  // Verify protocol command and tag count
+  if (response[7] != 0x4B || response[8] == 0) return ESP_ERR_INVALID_RESPONSE;
 
-  // 4. Extract UID and fire application callback
+  // Extract UID and fire application callback
   uint8_t uid_len = response[13];
   if (on_tag_cb_ && uid_len <= 7) {
     on_tag_cb_(on_tag_ctx_, *this, std::span<const uint8_t>(&response[14], uid_len));
   }
+  return ESP_OK;
 }
 
 EspResult<> Pn532::sam_config() {
@@ -278,30 +317,33 @@ EspResult<> Pn532::read_response(uint8_t expected_cmd, std::span<uint8_t> respon
  * | Command (Hex) | Name | Response (Hex) | Description |
  * | --- | --- | --- | --- |
  * | **`0x00`** | `Diagnose` | **`0x01`** | Run self-tests and communication line diagnostics. |
- * | **`0x02`** | `GetFirmwareVersion` | **`0x03`** | Returns IC identifier, version, and protocol support mask. |
- * | **`0x04`** | `GetGeneralStatus` | **`0x05`** | Returns current SAM state, field status, and tag memory limits. |
- * | **`0x06`** | `ReadRegister` | **`0x07`** | Read internal 8051 CPU registers or GPIO states. |
- * | **`0x08`** | `WriteRegister` | **`0x09`** | Write to internal 8051 CPU registers or GPIO pins. |
- * | **`0x0C`** | `ReadGPIO` | **`0x0D`** | Read hardware states of the P3 / P7 auxiliary pins. |
- * | **`0x0E`** | `WriteGPIO` | **`0x0F`** | Set hardware states of the P3 / P7 auxiliary pins. |
- * | **`0x10`** | `SetSerialBaudRate` | **`0x11`** | Change UART baud rate (Ignored over I2C). |
- * | **`0x12`** | `SetParameters` | **`0x13`** | Toggle automatic RF behaviors (e.g., auto-removing parity bits). |
- * | **`0x14`** | `SAMConfiguration` | **`0x15`** | Configure Secure Access Module, enable RF field, and route IRQ pin. |
- * | **`0x16`** | `PowerDown` | **`0x17`** | Put chip into deep sleep (Requires `WUP` packet to wake). |
- * | **`0x32`** | `InJumpForDEP` | **`0x33`** | Initiator: Configure NFC Peer-to-Peer mode setup. |
- * | **`0x40`** | `InDataExchange` | **`0x41`** | Initiator: Read/Write data blocks on a currently selected tag. |
- * | **`0x42`** | `InCommunicateThru` | **`0x43`** | Initiator: Send raw low-level RF transmission (bypassing protocol). |
- * | **`0x44`** | `InDeselect` | **`0x45`** | Initiator: Put the currently communicating tag back to sleep. |
- * | **`0x46`** | `InRelease` | **`0x47`** | Initiator: Completely release the current tag from memory. |
- * | **`0x48`** | `InSelect` | **`0x49`** | Initiator: Wake up a specific sleeping tag in the RF field. |
- * | **`0x4A`** | `InListPassiveTarget` | **`0x4B`** | Initiator: Poll the RF field for new tags and retrieve their UIDs. |
- * | **`0x50`** | `InAutoPoll` | **`0x51`** | Initiator: Continuously loop polling for multiple tag frequencies. |
- * | **`0x8C`** | `TgInitAsTarget` | **`0x8D`** | Target: Emulate a physical tag (Card Emulation mode). |
- * | **`0x8E`** | `TgSetGeneralBytes` | **`0x8F`** | Target: Set payload data for NFC Peer-to-Peer targets. |
- * | **`0x90`** | `TgGetData` | **`0x91`** | Target: Receive an incoming payload from an Initiator reader. |
- * | **`0x92`** | `TgSetData` | **`0x93`** | Target: Send a payload out to the Initiator reader. |
- * | **`0x94`** | `TgSetMetaData` | **`0x95`** | Target: Configure Card Emulation parameters. |
- * | **`0x96`** | `TgGetInitiatorCommand` | **`0x97`** | Target: Read raw incoming RF command. |
- * | **`0x98`** | `TgResponseToInitiator` | **`0x99`** | Target: Send raw outgoing RF response. |
- * | **`0x9A`** | `TgGetTargetStatus` | **`0x9B`** | Target: Check active connection state to the Initiator. |
+ * | **`0x02`** | `GetFirmwareVersion` | **`0x03`** | Returns IC identifier, version, and protocol
+ * support mask. | | **`0x04`** | `GetGeneralStatus` | **`0x05`** | Returns current SAM state, field
+ * status, and tag memory limits. | | **`0x06`** | `ReadRegister` | **`0x07`** | Read internal 8051
+ * CPU registers or GPIO states. | | **`0x08`** | `WriteRegister` | **`0x09`** | Write to internal
+ * 8051 CPU registers or GPIO pins. | | **`0x0C`** | `ReadGPIO` | **`0x0D`** | Read hardware states
+ * of the P3 / P7 auxiliary pins. | | **`0x0E`** | `WriteGPIO` | **`0x0F`** | Set hardware states of
+ * the P3 / P7 auxiliary pins. | | **`0x10`** | `SetSerialBaudRate` | **`0x11`** | Change UART baud
+ * rate (Ignored over I2C). | | **`0x12`** | `SetParameters` | **`0x13`** | Toggle automatic RF
+ * behaviors (e.g., auto-removing parity bits). | | **`0x14`** | `SAMConfiguration` | **`0x15`** |
+ * Configure Secure Access Module, enable RF field, and route IRQ pin. | | **`0x16`** | `PowerDown`
+ * | **`0x17`** | Put chip into deep sleep (Requires `WUP` packet to wake). | | **`0x32`** |
+ * `InJumpForDEP` | **`0x33`** | Initiator: Configure NFC Peer-to-Peer mode setup. | | **`0x40`** |
+ * `InDataExchange` | **`0x41`** | Initiator: Read/Write data blocks on a currently selected tag. |
+ * | **`0x42`** | `InCommunicateThru` | **`0x43`** | Initiator: Send raw low-level RF transmission
+ * (bypassing protocol). | | **`0x44`** | `InDeselect` | **`0x45`** | Initiator: Put the currently
+ * communicating tag back to sleep. | | **`0x46`** | `InRelease` | **`0x47`** | Initiator:
+ * Completely release the current tag from memory. | | **`0x48`** | `InSelect` | **`0x49`** |
+ * Initiator: Wake up a specific sleeping tag in the RF field. | | **`0x4A`** |
+ * `InListPassiveTarget` | **`0x4B`** | Initiator: Poll the RF field for new tags and retrieve their
+ * UIDs. | | **`0x50`** | `InAutoPoll` | **`0x51`** | Initiator: Continuously loop polling for
+ * multiple tag frequencies. | | **`0x8C`** | `TgInitAsTarget` | **`0x8D`** | Target: Emulate a
+ * physical tag (Card Emulation mode). | | **`0x8E`** | `TgSetGeneralBytes` | **`0x8F`** | Target:
+ * Set payload data for NFC Peer-to-Peer targets. | | **`0x90`** | `TgGetData` | **`0x91`** |
+ * Target: Receive an incoming payload from an Initiator reader. | | **`0x92`** | `TgSetData` |
+ * **`0x93`** | Target: Send a payload out to the Initiator reader. | | **`0x94`** | `TgSetMetaData`
+ * | **`0x95`** | Target: Configure Card Emulation parameters. | | **`0x96`** |
+ * `TgGetInitiatorCommand` | **`0x97`** | Target: Read raw incoming RF command. | | **`0x98`** |
+ * `TgResponseToInitiator` | **`0x99`** | Target: Send raw outgoing RF response. | | **`0x9A`** |
+ * `TgGetTargetStatus` | **`0x9B`** | Target: Check active connection state to the Initiator. |
  */

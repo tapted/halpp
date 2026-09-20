@@ -16,14 +16,16 @@ class Pn532 : public DefaultInstance<Pn532> {
   static constexpr uint8_t I2C_ADDRESS_DEFAULT = 0x24;
   using TagCallback = void (*)(void* ctx, Pn532& pn532, std::span<const uint8_t> uid);
 
-  explicit Pn532(I2CDevice device = I2CDevice{}, gpio_num_t irq_pin = GPIO_NUM_NC)
-      : i2c_dev_(std::move(device)), irq_pin_(irq_pin), scanning_(false) {}
+  explicit Pn532(I2CDevice device = I2CDevice{}, gpio_num_t irq_pin = GPIO_NUM_NC,
+                 gpio_num_t rstpdn_pin = GPIO_NUM_NC)
+      : i2c_dev_(std::move(device)), irq_pin_(irq_pin), rstpdn_pin_(rstpdn_pin) {}
 
   ~Pn532();
 
   static EspResult<> init_default(uint8_t i2c_address = I2C_ADDRESS_DEFAULT,
-                                  gpio_num_t irq_pin = GPIO_NUM_NC);
-
+                                  gpio_num_t irq_pin = GPIO_NUM_NC,
+                                  gpio_num_t rstpdn_pin = GPIO_NUM_NC);
+  EspResult<> hardware_reset();
   EspResult<> begin();
   bool is_initialized() const { return !!i2c_dev_; }
 
@@ -42,15 +44,17 @@ class Pn532 : public DefaultInstance<Pn532> {
   void poll() { process_tag_response(true); }
 
  private:
-  I2CDevice i2c_dev_;
-  gpio_num_t irq_pin_;
-  void* on_tag_ctx_;
-  TagCallback on_tag_cb_;
-  volatile bool scanning_;  // Volatile as it is checked/modified near ISR boundaries
+  I2CDevice i2c_dev_{};
+  gpio_num_t irq_pin_ = GPIO_NUM_NC;
+  gpio_num_t rstpdn_pin_ = GPIO_NUM_NC;
+  int consecutive_fails_ = 0;
+  void* on_tag_ctx_ = nullptr;
+  TagCallback on_tag_cb_ = nullptr;
+  volatile bool scanning_ = false;  // Volatile as it is checked/modified near ISR boundaries
 
   // ISR and Main Loop Thunks
   static void IRAM_ATTR gpio_isr_handler(void* arg);
-  void process_tag_response(bool poll_mode);
+  EspResult<> process_tag_response(bool poll_mode);
   void process_tag_response_from_interrupt() { process_tag_response(false); }
 
   // Protocol Helpers
