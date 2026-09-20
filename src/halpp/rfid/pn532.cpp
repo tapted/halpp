@@ -172,15 +172,29 @@ EspResult<> Pn532::process_tag_response(bool poll_mode) {
   uint8_t response[32] = {0};
   if (EspError err = i2c_dev_.rx(response)) return err.log(TAG, "process_tag_response");
 
-  ESP_LOGI(TAG, "Tag response -> Len: %02X, TFI: %02X, CMD: %02X, Tags: %02X", response[4],
-           response[6], response[7], response[8]);
-
   // Verify protocol command and tag count
   if (response[7] != 0x4B || response[8] == 0)
     return EspResult<>(ESP_ERR_INVALID_RESPONSE).log_error(TAG, "invalid response");
 
-  // Extract UID and fire application callback
+  // Extract hardware identifiers
+  uint16_t atqa = (response[10] << 8) | response[11];
+  uint8_t sak = response[12];
   uint8_t uid_len = response[13];
+
+  const char* type = "Unknown ISO14443A tag";
+  if (sak == 0x08 && uid_len == 4) {
+    type = "MIFARE Classic 1K (Fob/Card)";
+  } else if (sak == 0x00 && uid_len == 7) {
+    type = "NTAG / MIFARE Ultralight (Sticker/Tag)";
+  } else if (sak == 0x20 && atqa == 0x0344) {
+    type = "MIFARE DESFire (Opal card?)";
+  } else if (sak == 0x20 && atqa == 0x0048) {
+    type = "EMV Contactless Payment (Card/Device)";
+  } else if (sak == 0x20 && atqa == 0x0004) {
+    type = "Phone?";
+  }
+  ESP_LOGI(TAG, "Tag -> ATQA: %04X, SAK: %02X, UID Len: %d, Type: %s", atqa, sak, uid_len, type);
+
   if (on_tag_cb_ && uid_len <= 7) {
     on_tag_cb_(on_tag_ctx_, *this, std::span<const uint8_t>(&response[14], uid_len));
   }
