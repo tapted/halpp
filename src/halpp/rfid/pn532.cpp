@@ -106,16 +106,17 @@ EspResult<> Pn532::begin() {
 
 void IRAM_ATTR Pn532::gpio_isr_handler(void* arg) {
   Pn532* inst = static_cast<Pn532*>(arg);
-
-  // Disable the interrupt immediately so it doesn't bounce or double-fire
-  gpio_intr_disable(inst->irq_pin_);
-
-  // Post the processing task to the main loop context.
-  main_loop.push<&Pn532::process_tag_response_from_interrupt>(inst);
+  if (!inst->task_pending_) {
+    inst->task_pending_ = true;
+    main_loop.push<&Pn532::process_tag_response_from_interrupt>(inst);
+  }
 }
 
-EspResult<> Pn532::start_passive_target_read() {
-  if (irq_pin_ == GPIO_NUM_NC) return ESP_ERR_INVALID_STATE;
+void Pn532::start_passive_target_read() {
+  if (irq_pin_ == GPIO_NUM_NC) {
+    ESP_LOGW(TAG, "IRQ pin not configured. Cannot start passive target read.");
+    return;
+  }
 
   // 1. Ensure ISR is off so the ACK doesn't trigger a false positive
   gpio_intr_disable(irq_pin_);
@@ -123,13 +124,13 @@ EspResult<> Pn532::start_passive_target_read() {
 
   // 2. Write command
   constexpr uint8_t cmd[] = {0x4A, 0x01, 0x00};
-  if (EspError err = command(cmd)) return err.log(TAG, "start_passive_target_read command");
-
+  if (EspError err = command(cmd)) {
+    err.log(TAG, "start_passive_target_read command");
+    return;
+  }
   // 4. Command was accepted. Arm the ISR for the actual tag response!
   scanning_ = true;
   gpio_intr_enable(irq_pin_);
-
-  return ESP_OK;
 }
 
 EspResult<> Pn532::process_tag_response(bool poll_mode) {
@@ -150,14 +151,19 @@ EspResult<> Pn532::process_tag_response(bool poll_mode) {
 
       consecutive_fails_ = 0;  // Reset the counter
     } else if (!poll_mode) {
-      ESP_LOGW(TAG, "I2C read failed. Consecutive errors: %d", consecutive_fails_);
+      ESP_LOGW(TAG, "I2C read failed (%s). Consecutive errors: %d", esp_err_to_name(status.error()),
+               consecutive_fails_);
     }
     return status.strip().log_error(TAG, "process_tag_response status");
   }
 
   // A successful I2C read happened (even if it's just a 0x00 "Not Ready" byte)
   consecutive_fails_ = 0;
-  if (*status != 0x01) return ESP_ERR_INVALID_STATE;
+  if (*status == 0x00) return ESP_OK;  // Not ready.
+  if (*status != 0x01) {
+    ESP_LOGW(TAG, "Unexpected status byte: %02X", *status);
+    return ESP_ERR_INVALID_STATE;
+  }
 
   // Data is confirmed ready. Now we can safely mark the scan as complete.
   scanning_ = false;
@@ -170,7 +176,8 @@ EspResult<> Pn532::process_tag_response(bool poll_mode) {
            response[6], response[7], response[8]);
 
   // Verify protocol command and tag count
-  if (response[7] != 0x4B || response[8] == 0) return ESP_ERR_INVALID_RESPONSE;
+  if (response[7] != 0x4B || response[8] == 0)
+    return EspResult<>(ESP_ERR_INVALID_RESPONSE).log_error(TAG, "invalid response");
 
   // Extract UID and fire application callback
   uint8_t uid_len = response[13];
@@ -178,6 +185,17 @@ EspResult<> Pn532::process_tag_response(bool poll_mode) {
     on_tag_cb_(on_tag_ctx_, *this, std::span<const uint8_t>(&response[14], uid_len));
   }
   return ESP_OK;
+}
+
+EspResult<> Pn532::set_infinite_retries() {
+  // RFConfiguration (0x32) -> Config Item 5 (MaxRetries)
+  // Byte 3: MxRtyATR (0xFF = default)
+  // Byte 4: MxRtyPSL (0x01 = default)
+  // Byte 5: MxRtyPassiveActivation (0xFF = INFINITE)
+  constexpr uint8_t cmd[] = {0x32, 0x05, 0xFF, 0x01, 0xFF};
+  if (EspError err = command(cmd, 15)) return err.log(TAG, "set_infinite_retries command");
+  uint8_t response[14] = {0};
+  return read_response(0x33, response, 100).log_error(TAG, "set_infinite_retries response");
 }
 
 EspResult<> Pn532::sam_config() {
@@ -191,11 +209,11 @@ EspResult<> Pn532::power_down() {
 }
 
 EspResult<> Pn532::wake_up() {
-  // 1. Dummy ping to wake the oscillator (will intentionally NACK if asleep)
+  // Dummy ping to wake the oscillator (will intentionally NACK if asleep)
   (void)i2c_dev_.read_byte(10);
   vTaskDelay(pdMS_TO_TICKS(5));
 
-  // 2. Drain stuck TX buffer from previous crashes
+  // Drain stuck TX buffer from previous crashes
   // The PN532 returns 0x00 when its buffer is totally empty.
   // Read until we see 4 consecutive 0x00s to ensure we didn't just hit a 0x00 inside a valid frame.
   int consecutive_zeros = 0;
@@ -211,8 +229,11 @@ EspResult<> Pn532::wake_up() {
     }
   }
 
-  // 3. Bus is now completely synchronized. Send the configuration.
-  return sam_config();
+  // Bus is now completely synchronized. Send the configuration.
+  if (EspError err = sam_config()) return err.log(TAG, "wake_up sam_config");
+  if (EspError err = set_infinite_retries()) return err.log(TAG, "wake_up set_infinite_retries");
+  ESP_LOGI(TAG, "wake_up complete: infinite retries set");
+  return ESP_OK;
 }
 
 EspResult<> Pn532::get_firmware_version(std::array<uint8_t, 4>& version_out) {
@@ -312,38 +333,36 @@ EspResult<> Pn532::read_response(uint8_t expected_cmd, std::span<uint8_t> respon
 
 }  // namespace halpp
 
+// clang-format off
 /**
  * NXP PN532 Command Reference
  * | Command (Hex) | Name | Response (Hex) | Description |
  * | --- | --- | --- | --- |
  * | **`0x00`** | `Diagnose` | **`0x01`** | Run self-tests and communication line diagnostics. |
- * | **`0x02`** | `GetFirmwareVersion` | **`0x03`** | Returns IC identifier, version, and protocol
- * support mask. | | **`0x04`** | `GetGeneralStatus` | **`0x05`** | Returns current SAM state, field
- * status, and tag memory limits. | | **`0x06`** | `ReadRegister` | **`0x07`** | Read internal 8051
- * CPU registers or GPIO states. | | **`0x08`** | `WriteRegister` | **`0x09`** | Write to internal
- * 8051 CPU registers or GPIO pins. | | **`0x0C`** | `ReadGPIO` | **`0x0D`** | Read hardware states
- * of the P3 / P7 auxiliary pins. | | **`0x0E`** | `WriteGPIO` | **`0x0F`** | Set hardware states of
- * the P3 / P7 auxiliary pins. | | **`0x10`** | `SetSerialBaudRate` | **`0x11`** | Change UART baud
- * rate (Ignored over I2C). | | **`0x12`** | `SetParameters` | **`0x13`** | Toggle automatic RF
- * behaviors (e.g., auto-removing parity bits). | | **`0x14`** | `SAMConfiguration` | **`0x15`** |
- * Configure Secure Access Module, enable RF field, and route IRQ pin. | | **`0x16`** | `PowerDown`
- * | **`0x17`** | Put chip into deep sleep (Requires `WUP` packet to wake). | | **`0x32`** |
- * `InJumpForDEP` | **`0x33`** | Initiator: Configure NFC Peer-to-Peer mode setup. | | **`0x40`** |
- * `InDataExchange` | **`0x41`** | Initiator: Read/Write data blocks on a currently selected tag. |
- * | **`0x42`** | `InCommunicateThru` | **`0x43`** | Initiator: Send raw low-level RF transmission
- * (bypassing protocol). | | **`0x44`** | `InDeselect` | **`0x45`** | Initiator: Put the currently
- * communicating tag back to sleep. | | **`0x46`** | `InRelease` | **`0x47`** | Initiator:
- * Completely release the current tag from memory. | | **`0x48`** | `InSelect` | **`0x49`** |
- * Initiator: Wake up a specific sleeping tag in the RF field. | | **`0x4A`** |
- * `InListPassiveTarget` | **`0x4B`** | Initiator: Poll the RF field for new tags and retrieve their
- * UIDs. | | **`0x50`** | `InAutoPoll` | **`0x51`** | Initiator: Continuously loop polling for
- * multiple tag frequencies. | | **`0x8C`** | `TgInitAsTarget` | **`0x8D`** | Target: Emulate a
- * physical tag (Card Emulation mode). | | **`0x8E`** | `TgSetGeneralBytes` | **`0x8F`** | Target:
- * Set payload data for NFC Peer-to-Peer targets. | | **`0x90`** | `TgGetData` | **`0x91`** |
- * Target: Receive an incoming payload from an Initiator reader. | | **`0x92`** | `TgSetData` |
- * **`0x93`** | Target: Send a payload out to the Initiator reader. | | **`0x94`** | `TgSetMetaData`
- * | **`0x95`** | Target: Configure Card Emulation parameters. | | **`0x96`** |
- * `TgGetInitiatorCommand` | **`0x97`** | Target: Read raw incoming RF command. | | **`0x98`** |
- * `TgResponseToInitiator` | **`0x99`** | Target: Send raw outgoing RF response. | | **`0x9A`** |
- * `TgGetTargetStatus` | **`0x9B`** | Target: Check active connection state to the Initiator. |
+ * | **`0x02`** | `GetFirmwareVersion` | **`0x03`** | Returns IC identifier, version, and protocol support mask. |
+ * | **`0x04`** | `GetGeneralStatus` | **`0x05`** | Returns current SAM state, field status, and tag memory limits. |
+ * | **`0x06`** | `ReadRegister` | **`0x07`** | Read internal 8051 CPU registers or GPIO states. |
+ * | **`0x08`** | `WriteRegister` | **`0x09`** | Write to internal 8051 CPU registers or GPIO pins. |
+ * | **`0x0C`** | `ReadGPIO` | **`0x0D`** | Read hardware states of the P3 / P7 auxiliary pins. |
+ * | **`0x0E`** | `WriteGPIO` | **`0x0F`** | Set hardware states of the P3 / P7 auxiliary pins. |
+ * | **`0x10`** | `SetSerialBaudRate` | **`0x11`** | Change UART baud rate (Ignored over I2C). |
+ * | **`0x12`** | `SetParameters` | **`0x13`** | Toggle automatic RF behaviors (e.g., auto-removing parity bits). |
+ * | **`0x14`** | `SAMConfiguration` | **`0x15`** | Configure Secure Access Module, enable RF field, and route IRQ pin. |
+ * | **`0x16`** | `PowerDown` | **`0x17`** | Put chip into deep sleep (Requires `WUP` packet to wake). |
+ * | **`0x32`** | `InJumpForDEP` | **`0x33`** | Initiator: Configure NFC Peer-to-Peer mode setup. |
+ * | **`0x40`** | `InDataExchange` | **`0x41`** | Initiator: Read/Write data blocks on a currently selected tag. |
+ * | **`0x42`** | `InCommunicateThru` | **`0x43`** | Initiator: Send raw low-level RF transmission (bypassing protocol). |
+ * | **`0x44`** | `InDeselect` | **`0x45`** | Initiator: Put the currently communicating tag back to sleep. |
+ * | **`0x46`** | `InRelease` | **`0x47`** | Initiator: Completely release the current tag from memory. |
+ * | **`0x48`** | `InSelect` | **`0x49`** | Initiator: Wake up a specific sleeping tag in the RF field. |
+ * | **`0x4A`** | `InListPassiveTarget` | **`0x4B`** | Initiator: Poll the RF field for new tags and retrieve their UIDs. |
+ * | **`0x50`** | `InAutoPoll` | **`0x51`** | Initiator: Continuously loop polling for multiple tag frequencies. |
+ * | **`0x8C`** | `TgInitAsTarget` | **`0x8D`** | Target: Emulate a physical tag (Card Emulation mode). |
+ * | **`0x8E`** | `TgSetGeneralBytes` | **`0x8F`** | Target: Set payload data for NFC Peer-to-Peer targets. |
+ * | **`0x90`** | `TgGetData` | **`0x91`** | Target: Receive an incoming payload from an Initiator reader. |
+ * | **`0x92`** | `TgSetData` | **`0x93`** | Target: Send a payload out to the Initiator reader. |
+ * | **`0x94`** | `TgSetMetaData` | **`0x95`** | Target: Configure Card Emulation parameters. |
+ * | **`0x96`** | `TgGetInitiatorCommand` | **`0x97`** | Target: Read raw incoming RF command. |
+ * | **`0x98`** | `TgResponseToInitiator` | **`0x99`** | Target: Send raw outgoing RF response. |
+ * | **`0x9A`** | `TgGetTargetStatus` | **`0x9B`** | Target: Check active connection state to the Initiator. |
  */

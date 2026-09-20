@@ -35,7 +35,7 @@ class Pn532 : public DefaultInstance<Pn532> {
   }
 
   // Starts the scan. Returns immediately after the ACK.
-  EspResult<> start_passive_target_read();
+  void start_passive_target_read();
 
   EspResult<> power_down();
   EspResult<> wake_up();
@@ -50,12 +50,18 @@ class Pn532 : public DefaultInstance<Pn532> {
   int consecutive_fails_ = 0;
   void* on_tag_ctx_ = nullptr;
   TagCallback on_tag_cb_ = nullptr;
-  volatile bool scanning_ = false;  // Volatile as it is checked/modified near ISR boundaries
+  volatile bool task_pending_ = false;  // Avoid posting multiple tasks to the main loop.
+  volatile bool scanning_ = false;      // Volatile as it is checked/modified near ISR boundaries
 
   // ISR and Main Loop Thunks
   static void IRAM_ATTR gpio_isr_handler(void* arg);
   EspResult<> process_tag_response(bool poll_mode);
-  void process_tag_response_from_interrupt() { process_tag_response(false); }
+  EspResult<> set_infinite_retries();
+
+  void process_tag_response_from_interrupt() {
+    task_pending_ = false;
+    process_tag_response(false);
+  }
 
   // Protocol Helpers
   EspResult<> wait_ready(uint16_t timeout_ms);
