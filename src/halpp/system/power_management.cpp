@@ -4,7 +4,7 @@
 #include <esp_wifi.h>
 
 #include "espbase/esp_timer.hpp"
-#include "halpp/display/spi_display.hpp"
+#include "halpp/display/display.hpp"
 
 namespace halpp {
 
@@ -83,8 +83,8 @@ static void on_sleep_timeout() {
     if (disable_touch_on_screen_sleep_callback) disable_touch_on_screen_sleep_callback();
 
     screen_sleeping = true;
-    saved_backlight = SpiDisplay::default_instance().get_backlight();
-    SpiDisplay::default_instance().set_backlight(BacklightState::On, 0, FADE_OUT_TIME_MS);
+    saved_backlight = Display::instance().get_backlight();
+    Display::instance().set_backlight(BacklightState::On, 0, FADE_OUT_TIME_MS);
 
     // Trigger the hardware kill switch timer
     deep_sleep_timer.start_once(200);  // 200ms display off delay[cite: 5]
@@ -95,7 +95,7 @@ static void on_deep_sleep_timeout() {
   if (is_locked(PowerLock::PreventScreenOff)) {
     return;  // Abort hardware shutdown, leave panel on
   }
-  SpiDisplay::default_instance().set_backlight(BacklightState::Off, 0);
+  Display::instance().set_backlight(BacklightState::Off, 0);
 }
 
 static void on_radio_timeout() {
@@ -155,8 +155,7 @@ bool wake_up_screen(int8_t level) {
     }
     // Phase 2: Fade the backlight back to its previous brightness
     uint8_t target_backlight = (level >= 0) ? level : saved_backlight;
-    SpiDisplay::default_instance().set_backlight(BacklightState::On, target_backlight,
-                                                 FADE_IN_TIME_MS);
+    Display::instance().set_backlight(BacklightState::On, target_backlight, FADE_IN_TIME_MS);
   }
 
   // 3. Reset the sleep, radio, and hibernate timers
