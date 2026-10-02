@@ -71,7 +71,13 @@ constexpr std::array<uint8_t, (Width * Height) / 8> generate_boot_logo() {
   return buffer;
 }
 constexpr uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
-  return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+  uint16_t rgb = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+
+  if (config::lvgl::USE_RGB565_SWAPPED) {
+    return rgb << 8 | (rgb >> 8);
+  } else {
+    return rgb;
+  }
 }
 
 template <uint16_t Size = 128>

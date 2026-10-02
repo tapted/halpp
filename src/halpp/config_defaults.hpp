@@ -9,6 +9,8 @@
 #include <hal/spi_types.h>
 #include <soc/gpio_num.h>
 
+// For the headers above, REQUIRES "esp_driver_i2s", "esp_driver_ledc", "esp_lcd"
+
 namespace halpp {
 class Display;
 class GenericDisplay;
