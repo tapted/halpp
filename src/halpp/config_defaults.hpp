@@ -11,6 +11,10 @@
 
 // For the headers above, REQUIRES "esp_driver_i2s", "esp_driver_ledc", "esp_lcd"
 
+typedef struct esp_io_expander_s esp_io_expander_t;
+typedef esp_io_expander_t* esp_io_expander_handle_t;
+typedef struct i2c_master_bus_t* i2c_master_bus_handle_t;
+
 namespace halpp {
 class Display;
 class GenericDisplay;
@@ -22,6 +26,9 @@ esp_err_t not_supported_new_panel_func(const esp_lcd_panel_io_handle_t io,
                                        const esp_lcd_panel_dev_config_t* panel_dev_config,
                                        esp_lcd_panel_handle_t* ret_panel);
 void draw_default_boot_logo(halpp::Display& display);
+
+esp_err_t not_supported_io_expander_func(i2c_master_bus_handle_t i2c_bus, uint32_t dev_addr,
+                                         esp_io_expander_handle_t* handle_ret);
 
 struct SharedDefaults {
   struct System {
@@ -58,6 +65,10 @@ struct SharedDefaults {
     static constexpr uint32_t TIMEOUT_MS = 1000;   // Transaction timeout
     static constexpr bool ENABLE_PULLUP = true;
     static constexpr uint32_t SCL_WAIT_US = 0;  // 0 = use default
+  };
+  struct Exio {
+    static constexpr auto NEW_EXIO_FUNC = not_supported_io_expander_func;
+    static constexpr uint8_t I2C_ADDRESS = 0x20;  // Default I2C address for TCA9554
   };
   struct Display {
     using DisplayType = halpp::GenericDisplay;
