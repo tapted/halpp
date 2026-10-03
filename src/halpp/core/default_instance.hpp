@@ -40,6 +40,11 @@ class DefaultInstance {
   // The instance (unguarded) - caller must ensure it is initialized before use.
   static T& default_instance() { return *default_optional(); }
 
+  static T& autoinit_instance() {
+    init_default();
+    return default_instance();
+  }
+
   // Default RAII cleanup. Derived classes can shadow this if they need to return
   // hardware error codes during shutdown (e.g., returning the result of a reset).
   static EspResult<> deinit_default() {
