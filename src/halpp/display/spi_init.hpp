@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <driver/spi_common.h>
 #include <esp_lcd_io_spi.h>
 
@@ -11,10 +12,13 @@ namespace halpp {
 
 template <typename T = void>
 EspResult<Display::Config> init_spi_display(Display* instance) {
+  constexpr size_t MAX_TRANSFER_SZ = config::Display::WIDTH * config::Display::HEIGHT * 2 /
+                                     (std::max(config::lvgl::BUFFER_FRACTION, uint32_t{2}) - 1);
+
   esp_lcd_panel_io_spi_config_t::esp_lcd_spi_flags_t flags = {};
   spi_bus_config_t bus_config = {};
   bus_config.sclk_io_num = config::SpiBus::PIN_SERIAL_CLOCK;
-  bus_config.max_transfer_sz = 0;  // Use default max transfer size (4092 bytes for DMA)
+  bus_config.max_transfer_sz = MAX_TRANSFER_SZ;
   bus_config.flags = SPICOMMON_BUSFLAG_MASTER;
   bus_config.intr_flags = 0;
   if constexpr (config::SpiBus::PIN_QSPI_SDA_0 != GPIO_NUM_NC) {

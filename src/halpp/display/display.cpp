@@ -110,6 +110,10 @@ EspResult<> Display::init_default() {
   return inst.begin();
 }
 
+void Display::begin_direct() {
+  flush_sem_ = xSemaphoreCreateBinary();
+}
+
 void Display::DisplayLock::lock() {
   lvgl_mutex.lock();
 }
@@ -129,8 +133,18 @@ IRAM_ATTR bool Display::on_color_trans_done(esp_lcd_panel_io_handle_t /*panel_io
                                             esp_lcd_panel_io_event_data_t* /*edata*/,
                                             void* user_ctx) {
   Display* display = static_cast<Display*>(user_ctx);
-  if (display && display->lv_display_) {
+  if (!display) return false;
+  if (display->lv_display_) {
     lv_display_flush_ready(display->lv_display_);
+    if (display->next_flush_is_last_) {
+      display->is_flushing_ = false;
+      display->next_flush_is_last_ = false;
+    }
+  }
+  if (display->flush_sem_) {
+    BaseType_t need_yield = pdFALSE;
+    xSemaphoreGiveFromISR(display->flush_sem_, &need_yield);
+    return need_yield == pdTRUE;
   }
   return false;
 }
@@ -198,6 +212,8 @@ EspResult<> Display::init_lvgl(void (*on_screen_timer_tick_cb)()) {
   lv_display_set_flush_cb(
       lv_display_, [](lv_display_t* disp, const lv_area_t* area, uint8_t* px_map) {
         Display* display = static_cast<Display*>(lv_display_get_user_data(disp));
+        display->is_flushing_ = true;
+        display->next_flush_is_last_ = lv_display_flush_is_last(disp);
 
         const int w = area->x2 - area->x1 + 1;
         const int h = area->y2 - area->y1 + 1;

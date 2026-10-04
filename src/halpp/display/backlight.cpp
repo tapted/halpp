@@ -89,7 +89,7 @@ EspResult<> Backlight::set_level(uint8_t level, int fade_ms) {
     level = config::Display::BACKLIGHT_MAX;
   }
 
-  ESP_LOGI(TAG, "Setting backlight to %d (fade_ms=%d)", level, fade_ms);
+  ESP_LOGD(TAG, "Setting backlight to %d (fade_ms=%d)", level, fade_ms);
   level_ = level;
 
   // Calculate duty cycle

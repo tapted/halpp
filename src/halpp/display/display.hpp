@@ -7,6 +7,8 @@
 
 #include <cstdint>
 #include <esp_lcd_types.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include <mutex>
 
 #include "espbase/esp_result.hpp"
@@ -50,6 +52,9 @@ class Display {
   };
 
   bool is_initialized() const { return panel_handle_ != nullptr; }
+  bool is_lvgl_flushing() const { return is_flushing_; }
+  void ensure_flushed() { xSemaphoreTake(flush_sem_, portMAX_DELAY); }
+  void begin_direct();
 
   EspResult<> init_lvgl(void (*on_screen_timer_tick)() = nullptr);
   lv_display_t* get_lv_display() const { return lv_display_; }
@@ -71,22 +76,21 @@ class Display {
   EspResult<> clear();
 
   virtual uint8_t get_backlight() const;
-  virtual EspResult<> set_backlight(BacklightState state, uint8_t brightness,
-                                        int fade_ms = 500);
+  virtual EspResult<> set_backlight(BacklightState state, uint8_t brightness, int fade_ms = 500);
 
   // Virtualized so subclasses can intercept and transpose raw data (like SSD1306)
   virtual EspResult<> draw_bitmap(int x_start, int y_start, int width, int height,
-                                      const void* color_data, uint32_t stride_bytes = 0);
+                                  const void* color_data, uint32_t stride_bytes = 0);
 
   virtual EspResult<> draw_bitmap_2d(int x_start, int y_start, int width, int height,
-                                         const void* color_data, size_t src_width,
-                                         size_t src_height, int src_x_start, int src_y_start,
-                                         int src_crop_width, int src_crop_height);
+                                     const void* color_data, size_t src_width, size_t src_height,
+                                     int src_x_start, int src_y_start, int src_crop_width,
+                                     int src_crop_height);
 
   // New hook for LVGL indexed formats (cleanly separates the ARGB8888 palette from the pixels)
   virtual EspResult<> draw_indexed_bitmap(int x_start, int y_start, int width, int height,
-                                              const void* pixel_data, const void* palette,
-                                              uint32_t stride_bytes = 0);
+                                          const void* pixel_data, const void* palette,
+                                          uint32_t stride_bytes = 0);
 
   // Optional hook for subclasses to inject hardware-specific LVGL events (like coordinate rounding)
   virtual void on_lvgl_init(lv_display_t* disp);
@@ -103,6 +107,11 @@ class Display {
   lv_display_t* lv_display_ = nullptr;
 
  private:
+  // Synchronization primitives for direct-display operations.
+  SemaphoreHandle_t flush_sem_ = nullptr;
+  bool next_flush_is_last_ = false;
+  bool is_flushing_ = false;
+
   // Locks an internal mutex and notifies LVGL to redraw on unlock.
   struct DisplayLock {
    private:
