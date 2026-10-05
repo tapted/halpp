@@ -106,10 +106,10 @@ struct SharedDefaults {
 
     enum class ClockSource { AUTO, PLL /* c6 only */, RTC, XTAL };
     static constexpr ClockSource BACKLIGHT_CLOCK_SOURCE = ClockSource::RTC;
+    static constexpr uint32_t BACKLIGHT_LEDC_FREQ = 20000;  // 17.5MHz (RTC) / 875.0
+
     static constexpr ledc_channel_t BACKLIGHT_LEDC_CHANNEL = LEDC_CHANNEL_0;
     static constexpr ledc_timer_t BACKLIGHT_LEDC_TIMER = LEDC_TIMER_0;
-    static constexpr uint32_t BACKLIGHT_LEDC_FREQ = 3000;
-    static constexpr ledc_timer_bit_t BACKLIGHT_LEDC_RESOLUTION = LEDC_TIMER_12_BIT;
     static constexpr uint8_t BACKLIGHT_DEFAULT = 30;  // Backlight level set on boot (0-100)
     static constexpr uint8_t BACKLIGHT_MAX = 100;     // Max backlight level (0-100)
   };

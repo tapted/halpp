@@ -27,6 +27,7 @@ class Backlight {
  private:
   Timer timer_;
   Channel channel_;
+  uint32_t max_duty_ = 0;
   uint8_t level_ = 0;
 
   Backlight(const Backlight&) = delete;

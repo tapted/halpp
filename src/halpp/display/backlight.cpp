@@ -3,6 +3,7 @@
 #include <cmath>
 #include <driver/ledc.h>
 #include <esp_log.h>
+#include <soc/clk_tree_defs.h>
 
 #include "halpp/config.hpp"
 
@@ -10,19 +11,24 @@ static constexpr const char TAG[] = "BACKLIGHT";
 
 namespace halpp::display {
 
-static ledc_clk_cfg_t get_ledc_clk_cfg(config::Display::ClockSource clock_source) {
+static ledc_clk_cfg_t get_ledc_clk_cfg(config::Display::ClockSource clock_source,
+                                       uint32_t* src_clk_freq) {
   switch (clock_source) {
     case config::Display::ClockSource::AUTO:
+      *src_clk_freq = 0;
       return LEDC_AUTO_CLK;
     case config::Display::ClockSource::PLL:
 #if CONFIG_IDF_TARGET_ESP32C6
+      *src_clk_freq = 0;
       return LEDC_USE_PLL_DIV_CLK;
 #else
       return LEDC_AUTO_CLK;
 #endif
     case config::Display::ClockSource::RTC:
+      *src_clk_freq = SOC_CLK_RC_FAST_FREQ_APPROX;
       return LEDC_USE_RC_FAST_CLK;
     case config::Display::ClockSource::XTAL:
+      *src_clk_freq = 40000000;  // 40 MHz for XTAL
       return LEDC_USE_XTAL_CLK;
   }
   return LEDC_AUTO_CLK;
@@ -37,12 +43,20 @@ EspResult<> Backlight::begin() {
   }
   ESP_LOGD(TAG, "Initializing backlight...");
 
-  EspResult<Timer> timer_res =
-      Timer::configure(config::Display::BACKLIGHT_LEDC_TIMER,                      //
-                       get_ledc_clk_cfg(config::Display::BACKLIGHT_CLOCK_SOURCE),  //
-                       config::Display::BACKLIGHT_LEDC_RESOLUTION,                 //
-                       config::Display::BACKLIGHT_LEDC_FREQ,                       //
-                       LEDC_LOW_SPEED_MODE);
+  uint32_t src_clk_freq;
+  ledc_clk_cfg_t clk_cfg = get_ledc_clk_cfg(config::Display::BACKLIGHT_CLOCK_SOURCE, &src_clk_freq);
+  uint32_t resolution = LEDC_TIMER_8_BIT;
+  if (src_clk_freq != 0) {
+    resolution =
+        ledc_find_suitable_duty_resolution(src_clk_freq, config::Display::BACKLIGHT_LEDC_FREQ);
+  }
+  max_duty_ = (1 << resolution) - 1;
+
+  EspResult<Timer> timer_res = Timer::configure(config::Display::BACKLIGHT_LEDC_TIMER,      //
+                                                clk_cfg,                                    //
+                                                static_cast<ledc_timer_bit_t>(resolution),  //
+                                                config::Display::BACKLIGHT_LEDC_FREQ,       //
+                                                LEDC_LOW_SPEED_MODE);
   if (!timer_res) return timer_res.strip().log_error(TAG, "Failed to configure backlight timer");
 
   EspResult<Channel> chan_res = timer_res->add_channel(config::Display::BACKLIGHT_LEDC_CHANNEL,
@@ -93,8 +107,7 @@ EspResult<> Backlight::set_level(uint8_t level, int fade_ms) {
   level_ = level;
 
   // Calculate duty cycle
-  uint32_t max_duty = (1 << config::Display::BACKLIGHT_LEDC_RESOLUTION) - 1;
-  uint32_t duty = normalize_backlight_max_to_duty_max(level, max_duty);
+  uint32_t duty = normalize_backlight_max_to_duty_max(level, max_duty_);
 
   // Interrupt any fades currently in progress
   if (EspError err = channel_.fade_stop()) {
