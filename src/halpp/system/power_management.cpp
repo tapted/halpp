@@ -13,9 +13,9 @@ static constexpr const char TAG[] = "PowerManager";
 constexpr uint32_t FADE_IN_TIME_MS = 200;      // 200ms fade in when waking up
 constexpr uint32_t FADE_OUT_TIME_MS = 500;     // 500ms fade out when going to sleep
 constexpr uint32_t DISPLAY_OFF_TIME_MS = 200;  // 200ms after backlight hits 0 before cutting power
-constexpr uint32_t INACTIVITY_THRESHOLD_MS = 20000;
-constexpr uint32_t RADIO_SLEEP_THRESHOLD_MS = 60000;
-constexpr uint32_t HIBERNATE_THRESHOLD_MS = 300000;
+constexpr uint32_t INACTIVITY_THRESHOLD_MS = 20000;   // 20s of inacivity turns off backlight
+constexpr uint32_t RADIO_SLEEP_THRESHOLD_MS = 60000;  // 60s of inactivity triggers radio sleep
+constexpr uint32_t HIBERNATE_THRESHOLD_MS = 300000;   // 5 minutes of inactivity triggers deep sleep
 
 static std::atomic<uint32_t> lock_screen_fade{0};
 static std::atomic<uint32_t> lock_screen_off{0};
