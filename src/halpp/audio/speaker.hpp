@@ -28,8 +28,8 @@ class Speaker {
   // Initializes the I2C codec, I2S DMA, and powers on the Amp
   EspResult<> start_tx();
 
-  // Safely powers down the Amp and releases hardware buses
-  EspResult<> end_tx();
+  // Powers down the Amp, resets() (or powerdown()s) the device, then releases the i2s channel.
+  EspResult<> end_tx(bool powerdown = false);
 
   EspResult<> set_amp_enable(bool enable);
   EspResult<> set_hardware_volume(uint8_t percent);
@@ -48,6 +48,7 @@ class Speaker {
   virtual EspResult<> on_set_hardware_volume(uint8_t percent) = 0;
   virtual EspResult<> init_default(uint8_t i2c_address) = 0;
   virtual EspResult<> reset() = 0;
+  virtual EspResult<> powerdown() = 0;
 
   Speaker(const Speaker&) = delete;
   Speaker& operator=(const Speaker&) = delete;

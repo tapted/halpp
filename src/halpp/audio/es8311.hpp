@@ -41,7 +41,7 @@ struct Es8311Config {
 class Es8311 : public halpp::audio::Speaker {
  public:
   constexpr Es8311() = default;
-  ~Es8311() { end_tx(); }
+  ~Es8311() { end_tx(true /* powerdown */); }
 
   EspResult<> set_voice_volume(int percent);
   EspResult<> get_voice_volume(int& percent) const;
@@ -69,6 +69,9 @@ class Es8311 : public halpp::audio::Speaker {
   virtual EspResult<> on_set_hardware_volume(uint8_t percent) override;
   virtual EspResult<> init_default(uint8_t i2c_address) override;
   virtual EspResult<> reset() override;
+  // Powerdown, before a deep sleep.
+  // Always follow: Disable Amp -> Es8311::powerdown() -> Disable I2S -> Deinit I2C. 
+  virtual EspResult<> powerdown() override;
 
   Es8311(const Es8311&) = delete;
   Es8311& operator=(const Es8311&) = delete;

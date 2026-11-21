@@ -143,6 +143,29 @@ EspResult<> Es8311::reset() {
   return i2c_dev_.reset();  // Automatically calls i2c_master_bus_rm_device
 }
 
+EspResult<> Es8311::powerdown() {
+  if (!i2c_dev_) return ESP_ERR_INVALID_STATE;
+
+  // 1. Mute DAC and drop digital volume to minimum (-95.5 dB)
+  if (EspError err = set_voice_mute(true)) return err;
+  if (EspError err = write_reg(0x32, 0x00)) return err;
+
+  // 2. Power down DAC, output driver, and analog MIC/PGA
+  if (EspError err = write_reg(0x12, 0x02)) return err;  // PDN_DAC = 1
+  if (EspError err = write_reg(0x13, 0x00)) return err;  // Disable output driver
+  if (EspError err = write_reg(0x14, 0x00)) return err;  // Disable MIC bias & PGA
+
+  // 3. Power down analog blocks, VREF, bias generator, and VMID
+  if (EspError err = write_reg(0x0E, 0xFF)) return err;  // Power down analog PGA/modulator
+  if (EspError err = write_reg(0x0D, 0xFC)) return err;  // Power down VMID, VREF, biasgen
+
+  // 4. Gate internal clocks and disable the Chip State Machine (CSM_ON = 0)
+  if (EspError err = write_reg(0x01, 0x00)) return err;  // Stop all internal clocks
+  if (EspError err = write_reg(0x00, 0x00)) return err;  // Standby / CSM off (without 0x1F reset)
+
+  return i2c_dev_.reset();
+}
+
 EspResult<void> Es8311::write_reg(uint8_t reg_addr, uint8_t data) {
   return i2c_dev_.write_reg(reg_addr, data);
 }

@@ -28,12 +28,16 @@ EspResult<> Speaker::start_tx() {
   return set_amp_enable(true);
 }
 
-EspResult<> Speaker::end_tx() {
+EspResult<> Speaker::end_tx(bool for_powerdown) {
   // Mute everything before shutdown to prevent audio pops
   EspResult<> ret = set_amp_enable(false);
 
   // Shut down the codec and I2S
-  reset();  // check error?
+  if (for_powerdown) {
+    powerdown();  // check error?
+  } else {
+    reset();  // check error?
+  }
 
   if (tx_chan_) {
     I2SMaster::instance().release_tx();  // log error?
