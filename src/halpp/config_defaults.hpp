@@ -149,9 +149,14 @@ struct SharedDefaults {
     static constexpr gpio_num_t PIN_DATA2 = GPIO_NUM_NC;        // SD Data Line 2 (D2)
   };
   struct Audio {
-    static constexpr uint32_t SAMPLE_RATE = 48000;             // Default sample rate for I2S
+    static constexpr uint32_t SAMPLE_RATE = 48000;  // Default sample rate for I2S
+    static constexpr uint32_t MIC_SAMPLE_RATE = SAMPLE_RATE;
+
     static constexpr uint8_t DEFAULT_VOLUME = 70;              // Default volume percentage (0-100)
     static constexpr gpio_num_t PIN_AMP_ENABLE = GPIO_NUM_NC;  // GPIO to enable the amplifier
+
+    static constexpr float MIC_DEFAULT_GAIN_DB = 24.0f;  // Matches ES7210_MIC_GAIN_24DB
+    static constexpr int8_t MIC_DEFAULT_VOLUME_DB = 32;  // Matches es7210_config_volume(..., 32
 
     static constexpr gpio_num_t PIN_DATA_IN = GPIO_NUM_NC;   // I2S Data In (from Mic)
     static constexpr gpio_num_t PIN_DATA_OUT = GPIO_NUM_NC;  // I2S Data Out (to Speaker)
@@ -161,9 +166,11 @@ struct SharedDefaults {
 
     static constexpr uint8_t I2S_PORT = I2S_NUM_0;  // I2S port number
     static constexpr i2s_data_bit_width_t BITS_PER_SAMPLE = I2S_DATA_BIT_WIDTH_16BIT;
+    static constexpr i2s_data_bit_width_t MIC_BITS_PER_SAMPLE = BITS_PER_SAMPLE;
     static constexpr i2s_slot_mode_t SLOT_MODE = I2S_SLOT_MODE_STEREO;
 
     static constexpr uint8_t SPEAKER_I2C_ADDRESS = 0x18;  // Default I2C address for ES8311
+    static constexpr uint8_t MIC_I2C_ADDRESS = 0x40;      // Default I2C address for ES7210
 
     // Default to stereo. Usually the mic and speaker channels need to match in i2s. If you have
     // two mics, this will need to be true even if you have a mono speaker.
