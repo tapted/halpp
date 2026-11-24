@@ -26,9 +26,7 @@ constexpr uint8_t ES7210_TIME_CONTROL0_REG09 = 0x09;
 constexpr uint8_t ES7210_TIME_CONTROL1_REG0A = 0x0A;
 constexpr uint8_t ES7210_SDP_INTERFACE1_REG11 = 0x11;
 constexpr uint8_t ES7210_SDP_INTERFACE2_REG12 = 0x12;
-constexpr uint8_t ES7210_ADC_AUTOMUTE_REG13 = 0x13;
 constexpr uint8_t ES7210_ADC34_MUTERANGE_REG14 = 0x14;
-constexpr uint8_t ES7210_ALC_SEL_REG16 = 0x16;
 constexpr uint8_t ES7210_ADC1_DIRECT_DB_REG1B = 0x1B;
 constexpr uint8_t ES7210_ADC2_DIRECT_DB_REG1C = 0x1C;
 constexpr uint8_t ES7210_ADC3_DIRECT_DB_REG1D = 0x1D;
@@ -50,6 +48,36 @@ constexpr uint8_t ES7210_MIC3_POWER_REG49 = 0x49;
 constexpr uint8_t ES7210_MIC4_POWER_REG4A = 0x4A;
 constexpr uint8_t ES7210_MIC12_POWER_REG4B = 0x4B;
 constexpr uint8_t ES7210_MIC34_POWER_REG4C = 0x4C;
+
+// Automute & ALC Registers (ES7210 Datasheet Rev 2.0, Regs 0x13 - 0x1E)
+constexpr uint8_t ES7210_ADC_AUTOMUTE_REG13 = 0x13;   // Automute enable & mute ramp control
+constexpr uint8_t ES7210_ADC34_MUTE_REG14 = 0x14;     // ADC3/4 automute detection range
+constexpr uint8_t ES7210_ADC12_MUTE_REG15 = 0x15;     // ADC1/2 automute detection range
+constexpr uint8_t ES7210_ALC_SEL_REG16 = 0x16;        // ALC channel pair enable
+constexpr uint8_t ES7210_ALC_COM_CFG1_REG17 = 0x17;   // ALC attack, decay, hold & zero-cross
+constexpr uint8_t ES7210_ALC34_LVL_REG18 = 0x18;      // ADC3/4 ALC max/min target window
+constexpr uint8_t ES7210_ALC12_LVL_REG19 = 0x19;      // ADC1/2 ALC max/min target window
+constexpr uint8_t ES7210_ALC_COM_CFG2_REG1A = 0x1A;   // ALC window size & noise-gate link
+constexpr uint8_t ES7210_ADC4_MAX_GAIN_REG1B = 0x1B;  // ADC4 direct dB / ALC max gain
+constexpr uint8_t ES7210_ADC3_MAX_GAIN_REG1C = 0x1C;  // ADC3 direct dB / ALC max gain
+constexpr uint8_t ES7210_ADC2_MAX_GAIN_REG1D = 0x1D;  // ADC2 direct dB / ALC max gain
+constexpr uint8_t ES7210_ADC1_MAX_GAIN_REG1E = 0x1E;  // ADC1 direct dB / ALC max gain
+
+// ALC & Automute Bitfields
+constexpr uint8_t ALC16_ADC12_OFF = 0x00;
+constexpr uint8_t ALC16_ADC12_STEREO = 0x03;  // Bits [1:0] = 11 (ADC1/2 stereo ALC)
+constexpr uint8_t ALC16_ADC34_STEREO = 0x0C;  // Bits [3:2] = 11 (ADC3/4 stereo ALC)
+
+constexpr uint8_t AUTOMUTE13_DISABLE = 0x00;
+constexpr uint8_t AUTOMUTE13_ADC12_EN = 0x03;      // Enable automute on ADC1 & ADC2
+constexpr uint8_t AUTOMUTE15_VOICE_THRESH = 0x14;  // Moderate noise-gate threshold
+
+constexpr uint8_t ALC17_VOICE_TIMING = 0x34;   // Fast attack, moderate decay, ZC on
+constexpr uint8_t ALC19_TARGET_WINDOW = 0xC9;  // Max -7.8 dBFS (0xC), Min -10.1 dBFS (0x9)
+constexpr uint8_t ALC1A_VOICE_CFG2 = 0x14;     // Moderate hold / window config
+
+constexpr uint8_t ADC_GAIN_0DB = 0xBF;        // 0.0 dB (0.5 dB/step; 0x00 = -95.5 dB)
+constexpr uint8_t ADC_GAIN_PLUS_16DB = 0xDF;  // +16.0 dB ALC digital boost ceiling
 
 struct CoeffDiv {
   uint32_t mclk;
@@ -316,6 +344,41 @@ EspResult<> Es7210::set_mic_mute(bool mute) {
     reg13 &= ~0x03;
   }
   return write_reg(ES7210_ADC_AUTOMUTE_REG13, reg13);
+}
+
+EspResult<> Es7210::configure_alc(bool enable, bool enable_automute) {
+  if (!i2c_dev_) return ESP_ERR_INVALID_STATE;
+
+  if (!enable) {
+    if (EspError err = write_reg(ES7210_ALC_SEL_REG16, ALC16_ADC12_OFF)) return err;
+    if (EspError err = write_reg(ES7210_ADC_AUTOMUTE_REG13, AUTOMUTE13_DISABLE)) return err;
+    if (EspError err = write_reg(ES7210_ADC1_MAX_GAIN_REG1E, ADC_GAIN_0DB)) return err;
+    if (EspError err = write_reg(ES7210_ADC2_MAX_GAIN_REG1D, ADC_GAIN_0DB)) return err;
+    return ESP_OK;
+  }
+
+  // 1. Set the ALC digital gain ceiling on MIC1 & MIC2 (+16 dB above analog PGA gain)
+  if (EspError err = write_reg(ES7210_ADC1_MAX_GAIN_REG1E, ADC_GAIN_PLUS_16DB)) return err;
+  if (EspError err = write_reg(ES7210_ADC2_MAX_GAIN_REG1D, ADC_GAIN_PLUS_16DB)) return err;
+
+  // 2. Configure target level window (-7.8 dBFS to -10.1 dBFS) and attack/decay timing
+  if (EspError err = write_reg(ES7210_ALC12_LVL_REG19, ALC19_TARGET_WINDOW)) return err;
+  if (EspError err = write_reg(ES7210_ALC_COM_CFG1_REG17, ALC17_VOICE_TIMING)) return err;
+  if (EspError err = write_reg(ES7210_ALC_COM_CFG2_REG1A, ALC1A_VOICE_CFG2)) return err;
+
+  // 3. Configure hardware automute (noise gate) on ADC1 & ADC2
+  if (enable_automute) {
+    if (EspError err = write_reg(ES7210_ADC12_MUTE_REG15, AUTOMUTE15_VOICE_THRESH)) return err;
+    if (EspError err = write_reg(ES7210_ADC_AUTOMUTE_REG13, AUTOMUTE13_ADC12_EN)) return err;
+  } else {
+    if (EspError err = write_reg(ES7210_ADC_AUTOMUTE_REG13, AUTOMUTE13_DISABLE)) return err;
+  }
+
+  // 4. Enable stereo ALC on ADC1/2 (leave ADC3/4 untouched so any AEC reference stays fixed-gain)
+  if (EspError err = write_reg(ES7210_ALC_SEL_REG16, ALC16_ADC12_STEREO)) return err;
+
+  ESP_LOGI(TAG, "ES7210 ALC enabled (automute=%s)", enable_automute ? "on" : "off");
+  return ESP_OK;
 }
 
 EspResult<> Es7210::on_set_hardware_gain(float gain_db) {

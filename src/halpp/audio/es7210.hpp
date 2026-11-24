@@ -76,6 +76,7 @@ class Es7210 : public halpp::audio::Microphone {
   EspResult<> set_mic_bias(Es7210MicBias bias);
   EspResult<> set_digital_volume(int8_t volume_db);  // [-95, +32] dB
   EspResult<> set_mic_mute(bool mute);
+  EspResult<> configure_alc(bool enable, bool enable_automute);
 
  private:
   I2CDevice i2c_dev_;
