@@ -50,7 +50,8 @@ constexpr uint8_t ES7210_MIC12_POWER_REG4B = 0x4B;
 constexpr uint8_t ES7210_MIC34_POWER_REG4C = 0x4C;
 
 // Automute & ALC Registers (ES7210 Datasheet Rev 2.0, Regs 0x13 - 0x1E)
-constexpr uint8_t ES7210_ADC_AUTOMUTE_REG13 = 0x13;   // Automute enable & mute ramp control
+constexpr uint8_t ES7210_ADC_AUTOMUTE_REG13 = 0x13;  // Automute enable & mute ramp control
+constexpr uint8_t ES7210_ADC1_DIRECT_DB_REG1E = 0x1E;
 constexpr uint8_t ES7210_ADC34_MUTE_REG14 = 0x14;     // ADC3/4 automute detection range
 constexpr uint8_t ES7210_ADC12_MUTE_REG15 = 0x15;     // ADC1/2 automute detection range
 constexpr uint8_t ES7210_ALC_SEL_REG16 = 0x16;        // ALC channel pair enable
@@ -335,6 +336,29 @@ EspResult<> Es7210::set_digital_volume(int8_t volume_db) {
   return write_reg(ES7210_ADC4_DIRECT_DB_REG1E, reg_val);
 }
 
+EspResult<> Es7210::set_channel_gain(uint8_t channel, Es7210MicGain gain) {
+  if (channel < 1 || channel > 4) return ESP_ERR_INVALID_ARG;
+  const uint8_t reg = static_cast<uint8_t>(ES7210_MIC1_GAIN_REG43 + (channel - 1));
+  return write_reg(reg, static_cast<uint8_t>(gain) | 0x10);
+}
+
+EspResult<> Es7210::set_channel_volume(uint8_t channel, int8_t volume_db) {
+  if (channel < 1 || channel > 4) return ESP_ERR_INVALID_ARG;
+  if (volume_db < -95) volume_db = -95;
+  if (volume_db > 32) volume_db = 32;
+
+  // Note: Digital gain registers run descending (0x1E = ADC1 .. 0x1B = ADC4)
+  const uint8_t reg = static_cast<uint8_t>(ES7210_ADC1_DIRECT_DB_REG1E - (channel - 1));
+  const uint8_t reg_val = static_cast<uint8_t>(191 + volume_db * 2);
+  return write_reg(reg, reg_val);
+}
+
+EspResult<> Es7210::set_channel_enabled(uint8_t channel, bool enable) {
+  if (channel < 1 || channel > 4) return ESP_ERR_INVALID_ARG;
+  const uint8_t reg = static_cast<uint8_t>(ES7210_MIC1_POWER_REG47 + (channel - 1));
+  return write_reg(reg, enable ? 0x08 : 0x00);
+}
+
 EspResult<> Es7210::set_mic_mute(bool mute) {
   uint8_t reg13 = 0;
   if (EspError err = read_reg(ES7210_ADC_AUTOMUTE_REG13, reg13)) return err;
@@ -420,6 +444,16 @@ EspResult<> Es7210::init_default(uint8_t i2c_address) {
 
   set_mic_mute(false);
   set_digital_volume(config_.default_volume_db);
+
+  if (config_.aec_ref_channel >= 1 && config_.aec_ref_channel <= 4) {
+    // Keep the speaker AEC reference channel at 0 dB analog + 0 dB digital so it never clips
+    set_channel_gain(config_.aec_ref_channel, Es7210MicGain::Gain0dB);
+    set_channel_volume(config_.aec_ref_channel, 0);
+    // Power down unused MIC4 (Slot 3)
+    if (config_.aec_ref_channel != 4) {
+      set_channel_enabled(4, false);
+    }
+  }
 
   vTaskDelay(pdMS_TO_TICKS(10));
   return ESP_OK;

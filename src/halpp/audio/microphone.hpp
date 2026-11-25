@@ -16,11 +16,12 @@ class Microphone {
   virtual ~Microphone() = default;
 
   struct Config {
-    uint32_t sample_rate = halpp::config::Audio::MIC_SAMPLE_RATE;
+    uint32_t sample_rate = halpp::config::Audio::MIC_SAMPLE_RATE;  // 16000 Hz for ai_aec
     i2s_data_bit_width_t bits_per_sample = halpp::config::Audio::MIC_BITS_PER_SAMPLE;
     float default_gain_db = halpp::config::Audio::MIC_DEFAULT_GAIN_DB;
     int8_t default_volume_db = halpp::config::Audio::MIC_DEFAULT_VOLUME_DB;
-    bool tdm_enable = false;
+    bool tdm_enable = true;
+    uint8_t aec_ref_channel = 3;  // MIC3 = speaker loopback on 1.85C V2 (0 = none)
   };
 
   const Config& config() const { return config_; }

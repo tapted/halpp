@@ -75,6 +75,11 @@ class Es7210 : public halpp::audio::Microphone {
   EspResult<> set_mic_gain(Es7210MicGain gain);
   EspResult<> set_mic_bias(Es7210MicBias bias);
   EspResult<> set_digital_volume(int8_t volume_db);  // [-95, +32] dB
+
+  EspResult<> set_channel_gain(uint8_t channel, Es7210MicGain gain);  // channel: 1..4
+  EspResult<> set_channel_volume(uint8_t channel, int8_t volume_db);  // channel: 1..4
+  EspResult<> set_channel_enabled(uint8_t channel, bool enable);      // channel: 1..4
+
   EspResult<> set_mic_mute(bool mute);
   EspResult<> configure_alc(bool enable, bool enable_automute);
 
